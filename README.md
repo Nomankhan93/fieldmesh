@@ -1,21 +1,30 @@
-# FieldMesh 0.3 — Durable Internet Messaging
+# FieldMesh 0.3.1 — Protocol & Transport Architecture Stabilization
 
-This patch builds the first real cloud messaging path on top of the validated 0.2.1 identity and RLS foundation.
+FieldMesh 0.3.1 keeps the validated 0.3 messaging behavior while establishing the protocol boundaries required by the 0.4 mesh simulator, 0.5 gateway and later real-radio adapters.
 
 ## Scope
 
-- Durable `messages` mailbox in Supabase.
-- Explicit `delivered` and `read` receipts; cloud submission is not treated as recipient delivery.
-- Stable client-generated message IDs for duplicate suppression.
-- Local IndexedDB cloud outbox with retry/backoff and expiry.
-- Per-auth-user local storage scoping.
-- Separate local cloud delivery-attempt records.
-- Direct conversation creation by stable FieldMesh User ID without exposing a global profile directory.
-- Direct conversations limited to two members.
-- Conversation participant summaries only for members.
-- Conversation list, latest message, unread count and message status UI at `/messages`.
-- Existing `/simulator` preserved.
-- Automated local RLS and mailbox scenarios.
+- Shared logical `FieldMeshMessage` model for stable message identity and expiry.
+- Explicit separation between authenticated user, device, radio-node and simulator identities.
+- `TransportFrame` model with a unique frame ID per transmission while preserving the logical message ID.
+- Transport capabilities contract and `TransportRouter` foundation.
+- Existing mock-radio simulator migrated to transport frames without changing the `/simulator` workflow.
+- Existing internet messaging migrated to the shared logical-message identity/expiry creator while preserving its Supabase mailbox behavior.
+- One seven-day default logical text-message TTL across current cloud and simulator-created logical messages.
+- Direct-conversation creation serialized by canonical user pair to prevent concurrent duplicate threads.
+- Unit coverage for logical messages, frame identity/retry semantics and router selection.
+- Local Supabase scenario now tests concurrent direct-conversation creation.
+- Architecture contract documented in `docs/PROTOCOL_TRANSPORT.md`.
+
+## Important semantics
+
+- `FieldMeshUserId != RadioNodeId`.
+- One logical message keeps the same `MessageId` across retries/transports.
+- Every transport transmission gets its own `TransportFrameId`.
+- Transport/radio acceptance is not recipient application delivery.
+- Duplicate frames must still result in one logical chat message.
+- A transport frame inherits the logical message expiry.
+- The router selects one transport per attempt; uncontrolled automatic multi-transport fan-out is intentionally not introduced.
 
 ## Validation
 
@@ -31,15 +40,6 @@ Only after local validation passes:
 npx supabase db push
 ```
 
-## Acceptance flow
+## Next release
 
-1. Register two accounts in separate browser profiles/incognito windows.
-2. Copy User B's stable FieldMesh User ID.
-3. User A opens `/messages`, creates a direct conversation, and sends a message.
-4. User B can sign in later and retrieve the already-submitted message.
-5. A sees `delivered` after B synchronizes and `read` after B opens the conversation.
-6. With network unavailable, sending remains queued locally and retries after connectivity returns.
-7. Reloading preserves local queue/message state.
-8. `/simulator` still passes the 0.1 queue/retry/dedup tests.
-
-0.3 is cloud/internet messaging only. Hybrid LoRa ↔ gateway ↔ internet routing remains a later phase.
+FieldMesh 0.4 can now build the Advanced Mesh Failure Simulator around `TransportFrame` events, deterministic simulation time, seeded randomness, relays, per-link failures, ACK loss, retries, partitions and trace replay without redefining message identity.

@@ -1,4 +1,9 @@
-import type { FieldMeshEnvelope } from '../core/message/types'
+import type { TransportFrame } from '../core/transport/frame'
+
+export interface TransportCapabilities {
+  kind: 'radio' | 'internet' | 'local'
+  maxPayloadBytes?: number
+}
 
 export interface TransportSendResult {
   acceptedAt: number
@@ -7,7 +12,8 @@ export interface TransportSendResult {
 
 export interface FieldMeshTransport {
   readonly name: string
+  readonly capabilities: TransportCapabilities
   isAvailable(): boolean
-  send(envelope: FieldMeshEnvelope): Promise<TransportSendResult>
-  setReceiver(receiver: (envelope: FieldMeshEnvelope) => Promise<void>): void
+  send(frame: TransportFrame): Promise<TransportSendResult>
+  setReceiver(receiver: (frame: TransportFrame) => Promise<void>): void
 }

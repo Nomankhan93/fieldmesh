@@ -1,16 +1,16 @@
 import { z } from 'zod'
+import { DEFAULT_TEXT_MESSAGE_TTL_MS } from './model'
 import {
   FIELDMESH_PROTOCOL_VERSION,
   type FieldMeshEnvelope,
   type FieldMeshMessageType,
-  type FieldMeshUserId,
+  type SimulatorUserId,
 } from './types'
 
-// Meshtastic documents a 233-byte application payload ceiling. FieldMesh 0.1.1
-// uses a compact versioned wire tuple and keeps a small safety margin for the
-// first hardware integration tests.
+// Meshtastic documents a 233-byte application payload ceiling. FieldMesh keeps
+// a safety margin for protocol evolution and first hardware integration tests.
 export const RADIO_ENVELOPE_BUDGET_BYTES = 220
-export const DEFAULT_MESSAGE_TTL_MS = 24 * 60 * 60 * 1000
+export const DEFAULT_MESSAGE_TTL_MS = DEFAULT_TEXT_MESSAGE_TTL_MS
 
 const envelopeSchema = z.object({
   version: z.literal(FIELDMESH_PROTOCOL_VERSION),
@@ -48,11 +48,11 @@ const codeToType: Record<number, FieldMeshMessageType> = {
   2: 'location',
   3: 'sos',
 }
-const userToCode: Record<FieldMeshUserId, number> = {
+const userToCode: Record<SimulatorUserId, number> = {
   'user-a': 0,
   'user-b': 1,
 }
-const codeToUser: Record<number, FieldMeshUserId> = {
+const codeToUser: Record<number, SimulatorUserId> = {
   0: 'user-a',
   1: 'user-b',
 }
@@ -107,21 +107,26 @@ export function envelopeByteLength(envelope: FieldMeshEnvelope): number {
 }
 
 export function createTextEnvelope(args: {
-  senderId: FieldMeshUserId
-  recipientId: FieldMeshUserId
+  senderId: SimulatorUserId
+  recipientId: SimulatorUserId
   text: string
+  id?: string
   now?: number
+  expiresAt?: number
   ttlMs?: number
 }): FieldMeshEnvelope {
   const now = args.now ?? Date.now()
+  const expiresAt = args.expiresAt ?? now + (args.ttlMs ?? DEFAULT_MESSAGE_TTL_MS)
+  if (expiresAt <= now) throw new Error('Envelope expiry must be after creation time')
+
   return {
     version: FIELDMESH_PROTOCOL_VERSION,
-    id: crypto.randomUUID(),
+    id: args.id ?? crypto.randomUUID(),
     type: 'text',
     senderId: args.senderId,
     recipientId: args.recipientId,
     createdAt: now,
-    expiresAt: now + (args.ttlMs ?? DEFAULT_MESSAGE_TTL_MS),
+    expiresAt,
     payload: { text: args.text },
   }
 }

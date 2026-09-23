@@ -1,8 +1,17 @@
+import type { FieldMeshMessage, FieldMeshMessageType } from './model'
+import type { SimulatorUserId } from '../protocol/ids'
+
+export { FIELDMESH_MESSAGE_VERSION } from './model'
+export type {
+  FieldMeshDeviceId,
+  FieldMeshUserId,
+  RadioNodeId,
+  SimulatorNodeId,
+  SimulatorUserId,
+} from '../protocol/ids'
+export type { FieldMeshMessage, FieldMeshMessageType, MessagePriority } from './model'
+
 export const FIELDMESH_PROTOCOL_VERSION = 1 as const
-
-export type FieldMeshUserId = 'user-a' | 'user-b'
-
-export type FieldMeshMessageType = 'text' | 'receipt' | 'location' | 'sos'
 
 export type DeliveryState =
   | 'queued'
@@ -13,12 +22,15 @@ export type DeliveryState =
   | 'unconfirmed'
   | 'failed'
 
+// Compact simulator/radio payload. Authenticated FieldMesh user identity remains
+// separate from simulator/radio node identity and is not encoded as user-a/user-b
+// in the production identity model.
 export interface FieldMeshEnvelope {
   version: typeof FIELDMESH_PROTOCOL_VERSION
   id: string
   type: FieldMeshMessageType
-  senderId: FieldMeshUserId
-  recipientId: FieldMeshUserId
+  senderId: SimulatorUserId
+  recipientId: SimulatorUserId
   createdAt: number
   expiresAt: number
   payload: {
@@ -29,10 +41,11 @@ export interface FieldMeshEnvelope {
 export interface StoredMessage {
   id: string
   conversationId: string
-  senderId: FieldMeshUserId
-  recipientId: FieldMeshUserId
+  senderId: SimulatorUserId
+  recipientId: SimulatorUserId
   body: string
   envelope: FieldMeshEnvelope
+  logicalMessage?: FieldMeshMessage
   state: DeliveryState
   createdAt: number
   updatedAt: number
@@ -41,7 +54,8 @@ export interface StoredMessage {
 export interface DeliveryAttempt {
   id: string
   messageId: string
-  transport: 'mock-radio' | 'internet'
+  frameId?: string
+  transport: string
   status: 'started' | 'accepted' | 'failed'
   startedAt: number
   finishedAt?: number

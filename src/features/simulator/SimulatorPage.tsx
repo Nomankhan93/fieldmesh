@@ -2,27 +2,27 @@ import { useEffect, useMemo, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { RADIO_ENVELOPE_BUDGET_BYTES, utf8ByteLength } from '../../core/message/codec'
 import { MessageEngine } from '../../core/message/engine'
-import type { FieldMeshUserId } from '../../core/message/types'
+import type { SimulatorUserId } from '../../core/message/types'
 import { db } from '../../offline/db'
 import { MockRadioTransport } from '../../transports/mockRadio'
 
 const radio = new MockRadioTransport()
 const engine = new MessageEngine(radio)
 
-const userLabel: Record<FieldMeshUserId, string> = {
+const userLabel: Record<SimulatorUserId, string> = {
   'user-a': 'User A',
   'user-b': 'User B',
 }
 
 export function SimulatorPage() {
-  const [activeUser, setActiveUser] = useState<FieldMeshUserId>('user-a')
+  const [activeUser, setActiveUser] = useState<SimulatorUserId>('user-a')
   const [text, setText] = useState('')
   const [linkUp, setLinkUp] = useState(true)
   const [latencyMs, setLatencyMs] = useState(300)
   const [packetLossPercent, setPacketLossPercent] = useState(0)
   const [notice, setNotice] = useState('Simulator ready.')
 
-  const recipientId: FieldMeshUserId = activeUser === 'user-a' ? 'user-b' : 'user-a'
+  const recipientId: SimulatorUserId = activeUser === 'user-a' ? 'user-b' : 'user-a'
 
   const messages = useLiveQuery(
     () => db.messages.orderBy('createdAt').toArray(),
@@ -96,7 +96,7 @@ export function SimulatorPage() {
       <header className="mb-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">FieldMesh 0.3</p>
+            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">FieldMesh 0.3.1</p>
             <h1 className="mt-1 text-3xl font-bold tracking-tight">Offline Messaging Simulator</h1>
             <p className="mt-2 max-w-3xl text-sm text-slate-600">
               Simulated radio — no physical transmission. Messages, queues and deduplication are persisted in IndexedDB.
@@ -119,7 +119,7 @@ export function SimulatorPage() {
               <select
                 className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm"
                 value={activeUser}
-                onChange={(event) => setActiveUser(event.target.value as FieldMeshUserId)}
+                onChange={(event) => setActiveUser(event.target.value as SimulatorUserId)}
               >
                 <option value="user-a">Act as User A</option>
                 <option value="user-b">Act as User B</option>

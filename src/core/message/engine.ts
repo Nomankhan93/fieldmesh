@@ -1,46 +1,65 @@
 import { db } from '../../offline/db'
+import { TransportRouter } from '../../transports/router'
 import type { FieldMeshTransport } from '../../transports/types'
+import { simulatorNodeIdForUser } from '../protocol/ids'
+import { createTransportFrame, isTransportFrameExpired, type TransportFrame } from '../transport/frame'
 import {
   assertFitsRadioBudget,
   createTextEnvelope,
+  decodeEnvelope,
+  encodeEnvelope,
   envelopeByteLength,
 } from './codec'
-import type { FieldMeshEnvelope, FieldMeshUserId, StoredMessage } from './types'
-
-const conversationIdFor = (a: FieldMeshUserId, b: FieldMeshUserId) =>
-  [a, b].sort().join(':')
+import { createTextMessage, directConversationKey } from './model'
+import type { FieldMeshEnvelope, SimulatorUserId, StoredMessage } from './types'
 
 export class MessageEngine {
-  private readonly radio: FieldMeshTransport
+  private readonly router: TransportRouter
+  private readonly radioTransportName: string
 
   constructor(radio: FieldMeshTransport) {
-    this.radio = radio
-    this.radio.setReceiver(async (envelope) => {
-      await this.receive(envelope)
+    this.radioTransportName = radio.name
+    this.router = new TransportRouter([radio])
+    this.router.setReceiver(async (frame) => {
+      await this.receiveFrame(frame)
     })
   }
 
   async sendText(args: {
-    senderId: FieldMeshUserId
-    recipientId: FieldMeshUserId
+    senderId: SimulatorUserId
+    recipientId: SimulatorUserId
     text: string
   }): Promise<{ messageId: string; encodedBytes: number }> {
     const text = args.text.trim()
     if (!text) throw new Error('Message cannot be empty')
 
-    const envelope = createTextEnvelope({ ...args, text })
+    const conversationId = directConversationKey(args.senderId, args.recipientId)
+    const logicalMessage = createTextMessage({
+      conversationId,
+      senderUserId: args.senderId,
+      text,
+    })
+    const envelope = createTextEnvelope({
+      id: logicalMessage.id,
+      senderId: args.senderId,
+      recipientId: args.recipientId,
+      text,
+      now: logicalMessage.createdAt,
+      expiresAt: logicalMessage.expiresAt,
+    })
     assertFitsRadioBudget(envelope)
 
     const now = Date.now()
     const message: StoredMessage = {
-      id: envelope.id,
-      conversationId: conversationIdFor(args.senderId, args.recipientId),
+      id: logicalMessage.id,
+      conversationId,
       senderId: args.senderId,
       recipientId: args.recipientId,
       body: text,
       envelope,
+      logicalMessage,
       state: 'queued',
-      createdAt: now,
+      createdAt: logicalMessage.createdAt,
       updatedAt: now,
     }
 
@@ -49,7 +68,7 @@ export class MessageEngine {
       await db.outbox.put({
         messageId: message.id,
         nextAttemptAt: now,
-        expiresAt: envelope.expiresAt,
+        expiresAt: logicalMessage.expiresAt,
         retryCount: 0,
       })
     })
@@ -68,6 +87,39 @@ export class MessageEngine {
   }
 
   async receive(envelope: FieldMeshEnvelope): Promise<'accepted' | 'duplicate'> {
+    return this.receiveEnvelope(envelope)
+  }
+
+  async replayPacket(messageId: string): Promise<'accepted' | 'duplicate'> {
+    const message = await db.messages.get(messageId)
+    if (!message) throw new Error('No message available to replay')
+
+    const frame = createTransportFrame({
+      messageId: message.id,
+      sourceNodeId: simulatorNodeIdForUser(message.senderId),
+      destinationNodeId: simulatorNodeIdForUser(message.recipientId),
+      createdAt: Date.now(),
+      expiresAt: Math.max(message.envelope.expiresAt, Date.now() + 1),
+      attempt: 1,
+      payload: encodeEnvelope(message.envelope),
+    })
+    return this.receiveFrame(frame)
+  }
+
+  private async receiveFrame(frame: TransportFrame): Promise<'accepted' | 'duplicate'> {
+    if (isTransportFrameExpired(frame)) {
+      throw new Error('Transport frame expired before application delivery')
+    }
+
+    const envelope = decodeEnvelope(frame.payload)
+    if (envelope.id !== frame.messageId) {
+      throw new Error('Transport frame message ID does not match payload message ID')
+    }
+
+    return this.receiveEnvelope(envelope)
+  }
+
+  private async receiveEnvelope(envelope: FieldMeshEnvelope): Promise<'accepted' | 'duplicate'> {
     const seen = await db.seenPackets.get(envelope.id)
     if (seen) return 'duplicate'
 
@@ -87,13 +139,27 @@ export class MessageEngine {
       }
 
       if (envelope.type === 'text') {
+        const conversationId = directConversationKey(envelope.senderId, envelope.recipientId)
+        const body = envelope.payload.text ?? ''
+        const logicalMessage = body.trim()
+          ? createTextMessage({
+              id: envelope.id,
+              conversationId,
+              senderUserId: envelope.senderId,
+              text: body,
+              now: envelope.createdAt,
+              ttlMs: envelope.expiresAt - envelope.createdAt,
+            })
+          : undefined
+
         await db.messages.put({
           id: envelope.id,
-          conversationId: conversationIdFor(envelope.senderId, envelope.recipientId),
+          conversationId,
           senderId: envelope.senderId,
           recipientId: envelope.recipientId,
-          body: envelope.payload.text ?? '',
+          body,
           envelope,
+          logicalMessage,
           state: 'delivered',
           createdAt: envelope.createdAt,
           updatedAt: now,
@@ -102,12 +168,6 @@ export class MessageEngine {
     })
 
     return 'accepted'
-  }
-
-  async replayPacket(messageId: string): Promise<'accepted' | 'duplicate'> {
-    const message = await db.messages.get(messageId)
-    if (!message) throw new Error('No message available to replay')
-    return this.receive(structuredClone(message.envelope))
   }
 
   private async attempt(messageId: string): Promise<void> {
@@ -124,17 +184,31 @@ export class MessageEngine {
       return
     }
 
+    const frame = createTransportFrame({
+      messageId: message.id,
+      sourceNodeId: simulatorNodeIdForUser(message.senderId),
+      destinationNodeId: simulatorNodeIdForUser(message.recipientId),
+      createdAt: now,
+      expiresAt: queueItem.expiresAt,
+      attempt: queueItem.retryCount + 1,
+      payload: encodeEnvelope(message.envelope),
+    })
+
     const attemptId = crypto.randomUUID()
     await db.deliveryAttempts.put({
       id: attemptId,
       messageId,
-      transport: 'mock-radio',
+      frameId: frame.frameId,
+      transport: this.radioTransportName,
       status: 'started',
       startedAt: now,
     })
 
     try {
-      await this.radio.send(message.envelope)
+      await this.router.send(frame, {
+        preferred: [this.radioTransportName],
+        allowedKinds: ['radio'],
+      })
       await db.deliveryAttempts.update(attemptId, {
         status: 'accepted',
         finishedAt: Date.now(),

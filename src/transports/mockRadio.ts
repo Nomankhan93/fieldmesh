@@ -1,4 +1,5 @@
-import type { FieldMeshEnvelope } from '../core/message/types'
+import { RADIO_ENVELOPE_BUDGET_BYTES } from '../core/message/codec'
+import type { TransportFrame } from '../core/transport/frame'
 import type { FieldMeshTransport, TransportSendResult } from './types'
 
 export interface MockRadioSettings {
@@ -9,7 +10,12 @@ export interface MockRadioSettings {
 
 export class MockRadioTransport implements FieldMeshTransport {
   readonly name = 'mock-radio'
-  private receiver?: (envelope: FieldMeshEnvelope) => Promise<void>
+  readonly capabilities = {
+    kind: 'radio' as const,
+    maxPayloadBytes: RADIO_ENVELOPE_BUDGET_BYTES,
+  }
+
+  private receiver?: (frame: TransportFrame) => Promise<void>
   private settings: MockRadioSettings = {
     linkUp: true,
     latencyMs: 300,
@@ -32,11 +38,11 @@ export class MockRadioTransport implements FieldMeshTransport {
     return this.settings.linkUp
   }
 
-  setReceiver(receiver: (envelope: FieldMeshEnvelope) => Promise<void>): void {
+  setReceiver(receiver: (frame: TransportFrame) => Promise<void>): void {
     this.receiver = receiver
   }
 
-  async send(envelope: FieldMeshEnvelope): Promise<TransportSendResult> {
+  async send(frame: TransportFrame): Promise<TransportSendResult> {
     if (!this.settings.linkUp) {
       throw new Error('Simulated radio link is down')
     }
@@ -55,11 +61,11 @@ export class MockRadioTransport implements FieldMeshTransport {
       throw new Error('No simulated radio receiver registered')
     }
 
-    await this.receiver(structuredClone(envelope))
+    await this.receiver(structuredClone(frame))
 
     return {
       acceptedAt: Date.now(),
-      transportMessageId: `mock:${envelope.id}`,
+      transportMessageId: frame.frameId,
     }
   }
 }

@@ -116,22 +116,31 @@ async function main() {
     clients[spec.key] = await signIn(spec)
   }
 
-  const bFieldMeshId = await ownFieldMeshId(clients.b, users.b.id)
-  const created = await clients.a.rpc('fieldmesh_create_direct_conversation', {
-    p_recipient_fieldmesh_user_id: bFieldMeshId,
-  })
-  if (created.error) throw created.error
-  const conversationId = created.data
-  assert.ok(conversationId)
-  console.log('PASS direct conversation created from stable FieldMesh recipient ID')
+  const [aFieldMeshId, bFieldMeshId] = await Promise.all([
+    ownFieldMeshId(clients.a, users.a.id),
+    ownFieldMeshId(clients.b, users.b.id),
+  ])
+  const [createdByA, createdByB] = await Promise.all([
+    clients.a.rpc('fieldmesh_create_direct_conversation', {
+      p_recipient_fieldmesh_user_id: bFieldMeshId,
+    }),
+    clients.b.rpc('fieldmesh_create_direct_conversation', {
+      p_recipient_fieldmesh_user_id: aFieldMeshId,
+    }),
+  ])
+  if (createdByA.error) throw createdByA.error
+  if (createdByB.error) throw createdByB.error
+  assert.ok(createdByA.data)
+  assert.equal(createdByB.data, createdByA.data)
+  const conversationId = createdByA.data
+  console.log('PASS concurrent direct-conversation creation resolves to one canonical thread')
 
-  const aFieldMeshId = await ownFieldMeshId(clients.a, users.a.id)
   const duplicateDirect = await clients.b.rpc('fieldmesh_create_direct_conversation', {
     p_recipient_fieldmesh_user_id: aFieldMeshId,
   })
   if (duplicateDirect.error) throw duplicateDirect.error
   assert.equal(duplicateDirect.data, conversationId)
-  console.log('PASS direct conversation creation is idempotent for the same two users')
+  console.log('PASS direct conversation creation remains idempotent for the same two users')
 
   const participants = await clients.a.rpc('fieldmesh_conversation_participants', {
     p_conversation_id: conversationId,
@@ -240,7 +249,7 @@ async function main() {
   assert.ok(thirdMember.error)
   console.log('PASS direct conversation enforces the two-member boundary')
 
-  console.log('\nFieldMesh 0.3 durable internet messaging scenarios passed.')
+  console.log('\nFieldMesh 0.3.1 durable internet messaging scenarios passed.')
 }
 
 try {

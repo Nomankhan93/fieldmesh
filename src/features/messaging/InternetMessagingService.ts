@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { createTextMessage, DEFAULT_TEXT_MESSAGE_TTL_MS } from '../../core/message/model'
 import {
   db,
   type CloudMessageRecord,
@@ -7,7 +8,6 @@ import {
   type CloudReceiptType,
 } from '../../offline/db'
 
-const DEFAULT_CLOUD_TTL_MS = 7 * 24 * 60 * 60 * 1000
 const MAX_CLOUD_MESSAGE_CHARS = 4000
 
 export type InternetConversation = {
@@ -110,19 +110,25 @@ export class InternetMessagingService {
       throw new Error(`Internet messages are limited to ${MAX_CLOUD_MESSAGE_CHARS} characters in 0.3.`)
     }
 
-    const now = Date.now()
-    const id = crypto.randomUUID()
+    const logicalMessage = createTextMessage({
+      conversationId: args.conversationId,
+      senderUserId: args.localUserId,
+      text,
+      ttlMs: DEFAULT_TEXT_MESSAGE_TTL_MS,
+    })
+    const now = logicalMessage.createdAt
+    const id = logicalMessage.id
     const localKey = localMessageKey(args.localUserId, id)
     const message: CloudMessageRecord = {
       localKey,
       localUserId: args.localUserId,
       id,
-      conversationId: args.conversationId,
-      senderId: args.localUserId,
-      body: text,
+      conversationId: logicalMessage.conversationId,
+      senderId: logicalMessage.senderUserId,
+      body: logicalMessage.payload.text ?? text,
       state: 'queued',
-      createdAt: now,
-      expiresAt: now + DEFAULT_CLOUD_TTL_MS,
+      createdAt: logicalMessage.createdAt,
+      expiresAt: logicalMessage.expiresAt,
       updatedAt: now,
     }
 

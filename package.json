@@ -1,7 +1,7 @@
 {
   "name": "fieldmesh",
   "private": true,
-  "version": "0.3.0",
+  "version": "0.3.1",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -16,7 +16,8 @@
     "supabase:stop": "supabase stop",
     "db:reset": "supabase db reset",
     "db:lint": "supabase db lint",
-    "test:messaging": "node scripts/test-durable-messaging.mjs"
+    "test:messaging": "node scripts/test-durable-messaging.mjs",
+    "test:architecture": "vitest run src/core/message/model.test.ts src/core/transport/frame.test.ts src/transports/router.test.ts src/core/message/codec.test.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.0",
