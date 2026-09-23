@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="FieldMesh icon">
+  <rect width="512" height="512" rx="112" fill="#111827"/>
+  <circle cx="150" cy="256" r="34" fill="#ffffff"/>
+  <circle cx="362" cy="150" r="34" fill="#ffffff"/>
+  <circle cx="362" cy="362" r="34" fill="#ffffff"/>
+  <path d="M180 244 330 164M180 268l150 80" stroke="#ffffff" stroke-width="30" stroke-linecap="round"/>
+</svg>
