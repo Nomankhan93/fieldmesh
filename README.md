@@ -1,6 +1,6 @@
-# FieldMesh 0.4.1 — Mesh Visualization & Simulator UX Hardening
+# FieldMesh 0.5 — Hybrid Gateway Prototype
 
-FieldMesh 0.4.1 hardens the 0.4 Advanced Mesh Failure Simulator without changing its deterministic virtual-time architecture. The release turns the simulator into a more usable network-engineering workspace before the 0.5 Hybrid Gateway phase.
+FieldMesh 0.5 adds the first software-only LoRa ↔ Internet/cloud bridge on top of the 0.4.1 deterministic mesh lab and the 0.3.1 protocol/transport boundary.
 
 ## Current capabilities
 
@@ -8,80 +8,109 @@ FieldMesh 0.4.1 hardens the 0.4 Advanced Mesh Failure Simulator without changing
 - Supabase identity, devices, conversations and RLS.
 - Durable internet messaging with local outbox, cloud mailbox and delivered/read receipts.
 - Stable logical message IDs separated from transport frame IDs.
-- Transport router foundation for future internet/radio/gateway adapters.
 - Deterministic advanced mesh failure simulator at `/simulator`.
-- Interactive network topology with node/link diagnostics.
-- Built-in scenario expectation contracts with expected-vs-actual verdicts.
-- Separate application-delivery and sender-acknowledgement latency metrics.
-- Timeline categories, search and large-trace expansion without nested scrolling.
+- Hybrid Gateway lab at `/gateway`.
+- Durable gateway uplink/downlink queues in IndexedDB.
+- Radio → Gateway → Cloud forwarding.
+- Cloud → Gateway → Radio forwarding.
+- Gateway retry/recovery when either side is unavailable.
+- Duplicate-safe forwarding with one logical `messageId` across transports.
+- User → gateway → radio-node routing registry.
+- Gateway queue, routing, health and event diagnostics.
 
-## FieldMesh 0.4.1 simulator workspace
+## Hybrid Gateway architecture
 
-The simulator models:
+```text
+Field user / radio
+       │
+       ▼
+  Radio adapter
+       │
+       ▼
+  Gateway Agent
+   ├── durable uplink queue
+   ├── durable downlink queue
+   ├── duplicate ledger
+   └── routing registry
+       │
+       ▼
+ Internet / Cloud
+```
 
-- users, relays and gateway nodes;
-- multi-hop route selection;
-- online/offline/restarting/partitioned node states;
-- directional link state;
-- latency and jitter;
-- packet loss;
-- delivery-ACK loss;
-- duplicate RF frames;
-- retry and recovery;
-- message deduplication;
-- hop limits;
-- TTL expiration;
-- deterministic replay using a seeded pseudo-random generator;
-- packet timeline and metrics.
+Reverse delivery uses the same agent:
 
-The 0.4.1 UX layer adds:
+```text
+Cloud mailbox
+     │
+     ▼
+Gateway Agent
+     │
+     ├── resolve FieldMeshUserId → RadioNodeId
+     ├── queue if radio unavailable
+     └── create a new transport frame with the same logical messageId
+     │
+     ▼
+Radio node
+```
 
-- SVG topology graph with user, relay and gateway shapes;
-- final node/link state visualization;
-- delivered-route highlighting;
-- clickable node inspector;
-- clickable link inspector;
-- built-in baseline PASS/FAIL verdicts;
-- custom-run distinction when seed/failure overrides change;
-- Run Simulation, Replay Same Seed and reproducible-seed controls;
-- event filtering for Messages, Frames, ACKs, Failures and Network events;
-- event search by node, link, frame or event text;
-- responsive wide-screen utilization;
-- removal of the packet timeline's nested vertical scrollbar.
+## Three durable queue layers
 
-## Important architecture rules
+FieldMesh now has three independent durability boundaries:
+
+1. Phone/local outbox.
+2. Cloud mailbox/outbox.
+3. Gateway uplink/downlink queue.
+
+A transport outage at one boundary does not require the sender or recipient to stay online.
+
+## Permanent gateway rules
 
 - `FieldMeshUserId != RadioNodeId`.
-- One logical message keeps the same `MessageId` across retries/transports.
-- Every transport attempt gets its own `TransportFrameId`.
-- Radio/transport acceptance is not recipient application delivery.
-- Delivered means the destination application persisted the logical message.
-- ACK loss may cause retry, but duplicate logical delivery is suppressed.
-- Expired messages are not resurrected after late network recovery.
-- Same scenario + same seed + same overrides must produce the same trace and metrics.
-- A failed message can still be a successful simulator scenario when failure was the declared expected outcome.
-- The simulator is always software-only: **no physical transmission**.
+- Gateway forwarding never creates a new logical message identity.
+- The same `messageId` is preserved across radio, gateway and cloud.
+- A new RF transmission may use a new `frameId` and attempt number.
+- Gateway acceptance is not recipient application delivery.
+- Duplicate radio ingress must not create duplicate cloud messages.
+- Duplicate cloud ingress must not create duplicate radio delivery attempts after successful forwarding.
+- Queued traffic expires according to its original logical expiry; recovery never resurrects stale traffic.
+- Routing registry maps users to radio-node reachability and has explicit TTL.
+- Gateway queue state survives browser refresh through IndexedDB.
+- 0.5 adapters are simulated; no physical LoRa transmission occurs.
+
+## Gateway lab
+
+Run the app and open `/gateway`.
+
+The lab can:
+
+- toggle simulated radio online/offline;
+- toggle simulated internet/cloud online/offline;
+- inject Radio → Cloud traffic;
+- inject Cloud → Radio traffic;
+- inspect persistent uplink/downlink queue depth;
+- retry queued traffic immediately after recovery;
+- inspect the user-to-radio routing registry;
+- inspect gateway metrics and event timeline;
+- reset only the gateway-lab IndexedDB records.
 
 ## Validation
 
 ```bash
 npm run check
 npm run test:mesh
+npm run test:gateway
 npx supabase db reset
 npm run test:local
 ```
 
-0.4.1 adds no new Supabase migration. If the 0.3.1 migration has not yet been pushed, only push it after local validation passes:
-
-```bash
-npx supabase db push
-```
+0.5 adds no Supabase migration. It upgrades only the local Dexie database from schema version 2 to 3 to add gateway queue, dedupe and routing tables.
 
 ## Architecture documentation
 
-- `docs/PROTOCOL_TRANSPORT.md` — 0.3.1 protocol/transport boundaries.
-- `docs/MESH_SIMULATOR.md` — simulator semantics, scenario contracts and 0.4.1 visualization layer.
+- `docs/PROTOCOL_TRANSPORT.md` — logical-message and transport-frame boundaries.
+- `docs/MESH_SIMULATOR.md` — deterministic mesh simulator semantics.
+- `docs/HYBRID_GATEWAY.md` — 0.5 gateway agent, durability, routing and recovery semantics.
 
 ## Next release
 
-FieldMesh 0.5 can build the Hybrid Gateway Prototype on top of the deterministic simulator, stable protocol/transport boundary, interactive topology diagnostics and scenario acceptance contracts.
+FieldMesh 0.6 can build Location + SOS on this foundation, including emergency priority, last-known coordinates and gateway-assisted forwarding when internet is unavailable at the field user.

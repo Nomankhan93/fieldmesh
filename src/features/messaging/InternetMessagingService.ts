@@ -107,7 +107,7 @@ export class InternetMessagingService {
     const text = args.text.trim()
     if (!text) throw new Error('Message cannot be empty.')
     if (text.length > MAX_CLOUD_MESSAGE_CHARS) {
-      throw new Error(`Internet messages are limited to ${MAX_CLOUD_MESSAGE_CHARS} characters in 0.4.1.`)
+      throw new Error(`Internet messages are limited to ${MAX_CLOUD_MESSAGE_CHARS} characters in 0.5.`)
     }
 
     const logicalMessage = createTextMessage({

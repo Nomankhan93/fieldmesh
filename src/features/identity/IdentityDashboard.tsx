@@ -154,6 +154,9 @@ export function IdentityDashboard() {
             <Link to="/simulator" className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold">
               Open mesh failure simulator
             </Link>
+            <Link to="/gateway" className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold">
+              Hybrid gateway
+            </Link>
           </div>
         </div>
 

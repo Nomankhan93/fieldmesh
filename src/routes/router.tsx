@@ -2,6 +2,7 @@ import { createRootRoute, createRoute, createRouter, Outlet } from '@tanstack/re
 import { HomePage } from '../features/home/HomePage'
 import { MessagingPage } from '../features/messaging/MessagingPage'
 import { SimulatorPage } from '../features/simulator/SimulatorPage'
+import { GatewayPage } from '../features/gateway/GatewayPage'
 
 const rootRoute = createRootRoute({
   component: () => <Outlet />,
@@ -25,7 +26,13 @@ const simulatorRoute = createRoute({
   component: SimulatorPage,
 })
 
-const routeTree = rootRoute.addChildren([indexRoute, messagingRoute, simulatorRoute])
+const gatewayRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/gateway',
+  component: GatewayPage,
+})
+
+const routeTree = rootRoute.addChildren([indexRoute, messagingRoute, simulatorRoute, gatewayRoute])
 
 export const router = createRouter({ routeTree })
 

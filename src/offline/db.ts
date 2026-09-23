@@ -1,5 +1,6 @@
 import Dexie, { type EntityTable } from 'dexie'
 import type { DeliveryAttempt, StoredMessage } from '../core/message/types'
+import type { GatewayQueueItem, GatewayRouteRecord, GatewaySeenRecord } from '../core/gateway/types'
 
 export interface OutboxRecord {
   messageId: string
@@ -77,6 +78,9 @@ class FieldMeshDatabase extends Dexie {
   cloudOutbox!: EntityTable<CloudOutboxRecord, 'localKey'>
   cloudReceipts!: EntityTable<CloudReceiptRecord, 'localKey'>
   cloudDeliveryAttempts!: EntityTable<CloudDeliveryAttempt, 'id'>
+  gatewayQueue!: EntityTable<GatewayQueueItem, 'key'>
+  gatewaySeen!: EntityTable<GatewaySeenRecord, 'key'>
+  gatewayRoutes!: EntityTable<GatewayRouteRecord, 'key'>
 
   constructor() {
     super('fieldmesh-v01')
@@ -95,6 +99,19 @@ class FieldMeshDatabase extends Dexie {
       cloudOutbox: 'localKey, localUserId, messageId, nextAttemptAt, expiresAt, retryCount',
       cloudReceipts: 'localKey, localUserId, receiptKey, messageId, userId, receiptType, createdAt',
       cloudDeliveryAttempts: 'id, localUserId, messageId, status, startedAt',
+    })
+    this.version(3).stores({
+      messages: 'id, conversationId, senderId, recipientId, state, createdAt, updatedAt',
+      outbox: 'messageId, nextAttemptAt, expiresAt, retryCount',
+      seenPackets: 'packetId, receivedAt',
+      deliveryAttempts: 'id, messageId, transport, status, startedAt',
+      cloudMessages: 'localKey, localUserId, id, [localUserId+conversationId], senderId, state, createdAt, expiresAt, updatedAt',
+      cloudOutbox: 'localKey, localUserId, messageId, nextAttemptAt, expiresAt, retryCount',
+      cloudReceipts: 'localKey, localUserId, receiptKey, messageId, userId, receiptType, createdAt',
+      cloudDeliveryAttempts: 'id, localUserId, messageId, status, startedAt',
+      gatewayQueue: 'key, gatewayId, direction, messageId, nextAttemptAt, expiresAt',
+      gatewaySeen: 'key, gatewayId, direction, messageId, seenAt',
+      gatewayRoutes: 'key, userId, gatewayId, radioNodeId, lastSeenAt, expiresAt',
     })
   }
 }
