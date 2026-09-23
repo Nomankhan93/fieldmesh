@@ -8,10 +8,10 @@ export function HomePage() {
   return (
     <main className="mx-auto max-w-6xl p-4 sm:p-6">
       <header className="mb-6">
-        <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">FieldMesh 0.3</p>
-        <h1 className="mt-1 text-3xl font-bold tracking-tight">Identity + Durable Internet Messaging</h1>
+        <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">FieldMesh 0.4.1</p>
+        <h1 className="mt-1 text-3xl font-bold tracking-tight">Durable Messaging + Mesh Failure Lab</h1>
         <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
-          Stable identity and RLS now feed a durable cloud mailbox with local-first queues, deduplication and explicit delivered/read receipts.
+          Stable identity and durable internet messaging now sit alongside a deterministic multi-hop failure lab for routing, retries, packet loss, ACK loss, deduplication and recovery.
         </p>
       </header>
 

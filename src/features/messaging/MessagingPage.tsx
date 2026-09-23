@@ -217,7 +217,7 @@ export function MessagingPage() {
     <main className="mx-auto max-w-7xl p-4 sm:p-6">
       <header className="mb-5 flex flex-wrap items-start justify-between gap-4">
         <div>
-          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">FieldMesh 0.3</p>
+          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">FieldMesh 0.4.1</p>
           <h1 className="mt-1 text-3xl font-bold tracking-tight">Durable Internet Messaging</h1>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
             Messages are written to local IndexedDB first, queued when submission fails, and synchronized through the authenticated cloud mailbox.
@@ -229,7 +229,7 @@ export function MessagingPage() {
           </span>
           <span className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-semibold">Queued {queuedCount}</span>
           <Link to="/" className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold">Identity</Link>
-          <Link to="/simulator" className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold">Radio simulator</Link>
+          <Link to="/simulator" className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold">Mesh failure simulator</Link>
         </div>
       </header>
 

@@ -152,7 +152,7 @@ export function IdentityDashboard() {
               Open internet messaging
             </Link>
             <Link to="/simulator" className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold">
-              Open radio simulator
+              Open mesh failure simulator
             </Link>
           </div>
         </div>
@@ -236,7 +236,7 @@ export function IdentityDashboard() {
 
       <aside className="space-y-4">
         <section className="rounded-2xl border border-slate-200 bg-white p-5">
-          <h3 className="font-semibold">0.3 messaging boundary</h3>
+          <h3 className="font-semibold">Messaging security boundary</h3>
           <ul className="mt-3 space-y-2 text-sm leading-5 text-slate-600">
             <li>• Profile rows are owner-only through RLS.</li>
             <li>• Device rows are owner-only through RLS.</li>
