@@ -1,7 +1,7 @@
 {
   "name": "fieldmesh",
   "private": true,
-  "version": "0.5.0",
+  "version": "0.6.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -19,7 +19,8 @@
     "test:messaging": "node scripts/test-durable-messaging.mjs",
     "test:architecture": "vitest run src/core/message/model.test.ts src/core/transport/frame.test.ts src/transports/router.test.ts src/core/message/codec.test.ts",
     "test:mesh": "vitest run src/core/mesh/simulator.test.ts src/features/simulator/simulatorView.test.ts",
-    "test:gateway": "vitest run src/core/gateway/agent.test.ts"
+    "test:gateway": "vitest run src/core/gateway/agent.test.ts",
+    "test:sos": "vitest run src/core/location/location.test.ts src/core/sos/codec.test.ts src/core/sos/service.test.ts src/core/message/model.test.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.0",

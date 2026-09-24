@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { DEFAULT_TEXT_MESSAGE_TTL_MS } from './model'
+import { RADIO_APPLICATION_BUDGET_BYTES } from '../transport/limits'
 import {
   FIELDMESH_PROTOCOL_VERSION,
   type FieldMeshEnvelope,
@@ -7,9 +8,7 @@ import {
   type SimulatorUserId,
 } from './types'
 
-// Meshtastic documents a 233-byte application payload ceiling. FieldMesh keeps
-// a safety margin for protocol evolution and first hardware integration tests.
-export const RADIO_ENVELOPE_BUDGET_BYTES = 220
+export const RADIO_ENVELOPE_BUDGET_BYTES = RADIO_APPLICATION_BUDGET_BYTES
 export const DEFAULT_MESSAGE_TTL_MS = DEFAULT_TEXT_MESSAGE_TTL_MS
 
 const envelopeSchema = z.object({

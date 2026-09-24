@@ -3,6 +3,7 @@ import { HomePage } from '../features/home/HomePage'
 import { MessagingPage } from '../features/messaging/MessagingPage'
 import { SimulatorPage } from '../features/simulator/SimulatorPage'
 import { GatewayPage } from '../features/gateway/GatewayPage'
+import { SosPage } from '../features/sos/SosPage'
 
 const rootRoute = createRootRoute({
   component: () => <Outlet />,
@@ -32,7 +33,13 @@ const gatewayRoute = createRoute({
   component: GatewayPage,
 })
 
-const routeTree = rootRoute.addChildren([indexRoute, messagingRoute, simulatorRoute, gatewayRoute])
+const sosRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/sos',
+  component: SosPage,
+})
+
+const routeTree = rootRoute.addChildren([indexRoute, messagingRoute, simulatorRoute, gatewayRoute, sosRoute])
 
 export const router = createRouter({ routeTree })
 

@@ -9,7 +9,14 @@ export type {
   SimulatorNodeId,
   SimulatorUserId,
 } from '../protocol/ids'
-export type { FieldMeshMessage, FieldMeshMessageType, MessagePriority } from './model'
+export type {
+  FieldMeshLocationPayload,
+  FieldMeshMessage,
+  FieldMeshMessageType,
+  FieldMeshSosPayload,
+  MessagePriority,
+  SosCategory,
+} from './model'
 
 export const FIELDMESH_PROTOCOL_VERSION = 1 as const
 

@@ -1,116 +1,106 @@
-# FieldMesh 0.5 — Hybrid Gateway Prototype
+# FieldMesh 0.6 — Location + SOS
 
-FieldMesh 0.5 adds the first software-only LoRa ↔ Internet/cloud bridge on top of the 0.4.1 deterministic mesh lab and the 0.3.1 protocol/transport boundary.
+FieldMesh 0.6 builds field-safety workflows on top of the 0.5 Hybrid Gateway while preserving the 0.4 deterministic mesh simulator and 0.3.1 protocol/transport architecture.
 
 ## Current capabilities
 
-- PWA foundation and IndexedDB durability.
+- Installable React/TypeScript PWA with IndexedDB durability.
 - Supabase identity, devices, conversations and RLS.
-- Durable internet messaging with local outbox, cloud mailbox and delivered/read receipts.
-- Stable logical message IDs separated from transport frame IDs.
+- Durable Internet direct messaging with receipts and local outbox recovery.
+- Stable logical message IDs separated from transport-frame IDs.
 - Deterministic advanced mesh failure simulator at `/simulator`.
-- Hybrid Gateway lab at `/gateway`.
-- Durable gateway uplink/downlink queues in IndexedDB.
-- Radio → Gateway → Cloud forwarding.
-- Cloud → Gateway → Radio forwarding.
-- Gateway retry/recovery when either side is unavailable.
-- Duplicate-safe forwarding with one logical `messageId` across transports.
-- User → gateway → radio-node routing registry.
-- Gateway queue, routing, health and event diagnostics.
+- Hybrid Gateway lab at `/gateway` with durable uplink/downlink queues.
+- Browser location capture and durable location history.
+- Manual location updates with `location` priority.
+- Optional 1/5/15-minute foreground periodic location sharing (no background reliability claim).
+- Emergency SOS categories, optional coordinates, optional battery context and durable lifecycle records.
+- SOS transmission without GPS.
+- Emergency-priority retry ordering.
+- Direct Internet SOS delivery simulation.
+- Radio → Gateway → Cloud SOS fallback using the 0.5 `GatewayAgent`.
+- Gateway outage/recovery reconciliation.
+- Simulated responder acknowledgement and resolution lifecycle.
+- Dedicated Location + SOS lab at `/sos`.
 
-## Hybrid Gateway architecture
-
-```text
-Field user / radio
-       │
-       ▼
-  Radio adapter
-       │
-       ▼
-  Gateway Agent
-   ├── durable uplink queue
-   ├── durable downlink queue
-   ├── duplicate ledger
-   └── routing registry
-       │
-       ▼
- Internet / Cloud
-```
-
-Reverse delivery uses the same agent:
+## Safety architecture
 
 ```text
-Cloud mailbox
-     │
-     ▼
-Gateway Agent
-     │
-     ├── resolve FieldMeshUserId → RadioNodeId
-     ├── queue if radio unavailable
-     └── create a new transport frame with the same logical messageId
-     │
-     ▼
-Radio node
+                 Field user
+                    │
+           ┌────────┴─────────┐
+           │                  │
+     Direct Internet      Simulated radio
+           │                  │
+           ▼                  ▼
+   Simulated endpoint     Gateway Agent
+                              │
+                       durable uplink queue
+                              │
+                              ▼
+                      Simulated cloud endpoint
 ```
 
-## Three durable queue layers
+When neither path is available, the SOS remains in durable local IndexedDB state and is retried later. Emergency traffic is retried before location traffic.
 
-FieldMesh now has three independent durability boundaries:
+## SOS lifecycle
 
-1. Phone/local outbox.
-2. Cloud mailbox/outbox.
-3. Gateway uplink/downlink queue.
+```text
+Created
+  ↓
+Queued
+  ↓
+Transmitted
+  ↓
+Received
+  ↓
+Responder acknowledged
+  ↓
+Resolved
+```
 
-A transport outage at one boundary does not require the sender or recipient to stay online.
+GPS is optional. A missing/denied location fix never blocks SOS creation or transmission.
 
-## Permanent gateway rules
+## Permanent rules preserved
 
 - `FieldMeshUserId != RadioNodeId`.
-- Gateway forwarding never creates a new logical message identity.
-- The same `messageId` is preserved across radio, gateway and cloud.
-- A new RF transmission may use a new `frameId` and attempt number.
-- Gateway acceptance is not recipient application delivery.
-- Duplicate radio ingress must not create duplicate cloud messages.
-- Duplicate cloud ingress must not create duplicate radio delivery attempts after successful forwarding.
-- Queued traffic expires according to its original logical expiry; recovery never resurrects stale traffic.
-- Routing registry maps users to radio-node reachability and has explicit TTL.
-- Gateway queue state survives browser refresh through IndexedDB.
-- 0.5 adapters are simulated; no physical LoRa transmission occurs.
+- Message is durable before relying on transport recovery.
+- Same logical `messageId` is preserved across transport changes.
+- New RF attempts may use new `frameId` values.
+- Gateway acceptance is not application/cloud receipt.
+- SOS priority is higher than control, location and normal chat.
+- Stale safety traffic expires instead of being resurrected after recovery.
+- Simulator and gateway radio paths are software-only; no physical LoRa is claimed.
+- PWA foreground/background limitations remain explicit until native Android support.
 
-## Gateway lab
+## 0.6 local persistence
 
-Run the app and open `/gateway`.
+Dexie schema version 4 adds:
 
-The lab can:
+- `locationFixes`
+- `locationShares`
+- `sosRecords`
+- `sosEvents`
 
-- toggle simulated radio online/offline;
-- toggle simulated internet/cloud online/offline;
-- inject Radio → Cloud traffic;
-- inject Cloud → Radio traffic;
-- inspect persistent uplink/downlink queue depth;
-- retry queued traffic immediately after recovery;
-- inspect the user-to-radio routing registry;
-- inspect gateway metrics and event timeline;
-- reset only the gateway-lab IndexedDB records.
+No new Supabase migration is added in 0.6. Cloud responder authorization is intentionally deferred until the 0.7 group/permission security model exists.
 
 ## Validation
 
 ```bash
 npm run check
-npm run test:mesh
+npm run test:sos
 npm run test:gateway
+npm run test:mesh
 npx supabase db reset
 npm run test:local
 ```
-
-0.5 adds no Supabase migration. It upgrades only the local Dexie database from schema version 2 to 3 to add gateway queue, dedupe and routing tables.
 
 ## Architecture documentation
 
 - `docs/PROTOCOL_TRANSPORT.md` — logical-message and transport-frame boundaries.
 - `docs/MESH_SIMULATOR.md` — deterministic mesh simulator semantics.
-- `docs/HYBRID_GATEWAY.md` — 0.5 gateway agent, durability, routing and recovery semantics.
+- `docs/HYBRID_GATEWAY.md` — gateway durability, routing and recovery semantics.
+- `docs/LOCATION_SOS.md` — 0.6 location, emergency priority, lifecycle and hybrid delivery semantics.
 
 ## Next release
 
-FieldMesh 0.6 can build Location + SOS on this foundation, including emergency priority, last-known coordinates and gateway-assisted forwarding when internet is unavailable at the field user.
+FieldMesh 0.7 can build Groups + Permissions + Crypto Foundation: group/broadcast/emergency conversations, responder authorization, device/key revocation foundations, replay protection and an end-to-end encryption design that keeps gateway/cloud infrastructure outside plaintext message content.

@@ -1,6 +1,8 @@
 import Dexie, { type EntityTable } from 'dexie'
 import type { DeliveryAttempt, StoredMessage } from '../core/message/types'
 import type { GatewayQueueItem, GatewayRouteRecord, GatewaySeenRecord } from '../core/gateway/types'
+import type { LocationFix } from '../core/location/types'
+import type { LocationShareRecord, SosEvent, SosRecord } from '../core/sos/types'
 
 export interface OutboxRecord {
   messageId: string
@@ -81,6 +83,10 @@ class FieldMeshDatabase extends Dexie {
   gatewayQueue!: EntityTable<GatewayQueueItem, 'key'>
   gatewaySeen!: EntityTable<GatewaySeenRecord, 'key'>
   gatewayRoutes!: EntityTable<GatewayRouteRecord, 'key'>
+  locationFixes!: EntityTable<LocationFix, 'id'>
+  locationShares!: EntityTable<LocationShareRecord, 'id'>
+  sosRecords!: EntityTable<SosRecord, 'id'>
+  sosEvents!: EntityTable<SosEvent, 'id'>
 
   constructor() {
     super('fieldmesh-v01')
@@ -112,6 +118,23 @@ class FieldMeshDatabase extends Dexie {
       gatewayQueue: 'key, gatewayId, direction, messageId, nextAttemptAt, expiresAt',
       gatewaySeen: 'key, gatewayId, direction, messageId, seenAt',
       gatewayRoutes: 'key, userId, gatewayId, radioNodeId, lastSeenAt, expiresAt',
+    })
+    this.version(4).stores({
+      messages: 'id, conversationId, senderId, recipientId, state, createdAt, updatedAt',
+      outbox: 'messageId, nextAttemptAt, expiresAt, retryCount',
+      seenPackets: 'packetId, receivedAt',
+      deliveryAttempts: 'id, messageId, transport, status, startedAt',
+      cloudMessages: 'localKey, localUserId, id, [localUserId+conversationId], senderId, state, createdAt, expiresAt, updatedAt',
+      cloudOutbox: 'localKey, localUserId, messageId, nextAttemptAt, expiresAt, retryCount',
+      cloudReceipts: 'localKey, localUserId, receiptKey, messageId, userId, receiptType, createdAt',
+      cloudDeliveryAttempts: 'id, localUserId, messageId, status, startedAt',
+      gatewayQueue: 'key, gatewayId, direction, messageId, nextAttemptAt, expiresAt',
+      gatewaySeen: 'key, gatewayId, direction, messageId, seenAt',
+      gatewayRoutes: 'key, userId, gatewayId, radioNodeId, lastSeenAt, expiresAt',
+      locationFixes: 'id, capturedAt, source',
+      locationShares: 'id, status, path, createdAt, updatedAt',
+      sosRecords: 'id, status, category, path, createdAt, updatedAt',
+      sosEvents: 'id, sosId, at, type',
     })
   }
 }
