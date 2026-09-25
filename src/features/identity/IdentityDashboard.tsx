@@ -3,6 +3,7 @@ import { useAuth } from '../auth/AuthProvider'
 import { buildContactDeepLink, buildContactShareText, formatFieldMeshCode } from '../contacts/contactCode'
 import { readDeveloperMode, subscribeDeveloperMode, writeDeveloperMode } from '../shell/developerMode'
 import { supabase } from '../../lib/supabase'
+import { PwaSettingsCard } from '../pwa/PwaSettingsCard'
 
 type Profile = {
   id: string
@@ -258,6 +259,8 @@ export function IdentityDashboard() {
           ))}
         </div>
       </section>
+
+      <PwaSettingsCard />
 
       <details className="mt-5 rounded-2xl border border-slate-200 bg-white p-5">
         <summary className="cursor-pointer font-bold text-slate-800">Advanced app settings</summary>

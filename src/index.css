@@ -20,7 +20,10 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
+  min-height: 100dvh;
   background: #f7f9ff;
+  overscroll-behavior-y: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 button,
@@ -32,4 +35,13 @@ textarea {
 
 ::selection {
   background: rgba(23, 105, 255, 0.22);
+}
+
+
+@media (display-mode: standalone) {
+  html,
+  body,
+  #root {
+    min-height: 100dvh;
+  }
 }

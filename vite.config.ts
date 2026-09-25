@@ -8,7 +8,7 @@ export default defineConfig({
     react(),
     tailwindcss(),
     VitePWA({
-      registerType: 'autoUpdate',
+      registerType: 'prompt',
       includeAssets: [
         'icons/connectx-favicon-64.png',
         'icons/connectx-apple-touch-180.png',
@@ -19,6 +19,9 @@ export default defineConfig({
         name: 'ConnectX',
         short_name: 'ConnectX',
         description: 'ConnectX — resilient offline-first hybrid messaging. Stay Connected. Anywhere.',
+        lang: 'en',
+        dir: 'ltr',
+        orientation: 'any',
         theme_color: '#07113f',
         background_color: '#030a30',
         display: 'standalone',
@@ -65,6 +68,8 @@ export default defineConfig({
       workbox: {
         navigateFallback: '/index.html',
         cleanupOutdatedCaches: true,
+        skipWaiting: false,
+        clientsClaim: false,
       },
     }),
   ],

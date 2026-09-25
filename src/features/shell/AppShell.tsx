@@ -3,6 +3,7 @@ import { Link, Outlet, useRouterState } from '@tanstack/react-router'
 import { APP_BRAND } from '../../config/brand'
 import { useAuth } from '../auth/AuthProvider'
 import { NavIcon } from './NavIcon'
+import { PwaStatusCenter } from '../pwa/PwaStatusCenter'
 import {
   DEVELOPER_NAV_ITEMS,
   MOBILE_NAV_ITEMS,
@@ -101,7 +102,8 @@ export function AppShell() {
   if (!session) {
     return (
       <div className="min-h-screen bg-[#f7f9ff]">
-        <header className="border-b border-blue-100 bg-white/95 backdrop-blur">
+        <PwaStatusCenter />
+        <header className="border-b border-blue-100 bg-white/95 backdrop-blur" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
           <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
             <Link to="/" aria-label="ConnectX home"><BrandIdentity /></Link>
             <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">v{APP_BRAND.version}</span>
@@ -117,7 +119,8 @@ export function AppShell() {
 
   return (
     <div className="min-h-screen bg-[#f7f9ff] text-slate-950">
-      <header className="sticky top-0 z-40 border-b border-blue-100 bg-white/95 backdrop-blur lg:hidden">
+      <PwaStatusCenter />
+      <header className="sticky top-0 z-40 border-b border-blue-100 bg-white/95 backdrop-blur lg:hidden" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
         <div className="flex items-center justify-between px-4 py-2.5">
           <Link to="/" aria-label="ConnectX home"><BrandIdentity compact /></Link>
           {developer && developerMode ? (

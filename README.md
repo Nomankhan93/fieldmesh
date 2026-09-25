@@ -67,3 +67,19 @@ npx supabase db lint
 ```
 
 0.8.1 adds **no Supabase migration**. It adds IndexedDB schema version 6 locally.
+
+
+## ConnectX PWA productization
+
+ConnectX now owns its PWA lifecycle in the React application rather than silently auto-updating in the background. The app exposes install eligibility, standalone-mode detection, offline readiness, persistent-storage status, online/offline transitions, and service-worker update availability through a single PWA provider.
+
+User-facing behavior:
+
+- Chromium/Android/desktop install prompts are surfaced explicitly when the browser emits `beforeinstallprompt`.
+- iPhone/iPad users receive Safari **Share → Add to Home Screen** guidance.
+- new service-worker versions wait for explicit **Update now** confirmation instead of forcing an active session to refresh.
+- loss/restoration of network connectivity is shown in plain language while the existing offline workspace remains available.
+- the Profile page contains a PWA status card for install state, offline shell, persistent storage and update checks.
+- ConnectX retains its offline-first IndexedDB queues; the service worker only provides the application shell/static asset layer.
+
+See `docs/PWA_PRODUCTIZATION.md` for lifecycle and acceptance details.
