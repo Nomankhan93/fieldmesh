@@ -142,6 +142,20 @@ async function main() {
   assert.equal(duplicateDirect.data, conversationId)
   console.log('PASS direct conversation creation remains idempotent for the same two users')
 
+  const bContactCode = `FM-${bFieldMeshId.replaceAll('-', '').slice(-12).toUpperCase()}`
+  const byContactCode = await clients.a.rpc('fieldmesh_create_direct_conversation_by_contact', {
+    p_contact: bContactCode,
+  })
+  if (byContactCode.error) throw byContactCode.error
+  assert.equal(byContactCode.data, conversationId)
+  console.log('PASS FieldMesh contact code opens the canonical direct conversation without profile disclosure')
+
+  const invalidContact = await clients.a.rpc('fieldmesh_create_direct_conversation_by_contact', {
+    p_contact: 'not-a-fieldmesh-code',
+  })
+  assert.ok(invalidContact.error)
+  console.log('PASS invalid contact discovery input is rejected')
+
   const participants = await clients.a.rpc('fieldmesh_conversation_participants', {
     p_conversation_id: conversationId,
   })

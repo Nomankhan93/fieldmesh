@@ -23,7 +23,28 @@ export type ConversationParticipant = {
   user_id: string
   fieldmesh_user_id: string
   display_name: string
-  role: 'owner' | 'member'
+  role: 'owner' | 'admin' | 'member'
+  joined_at?: string
+}
+
+export type ConversationCryptoEpoch = {
+  epoch: number
+  suite: 'AES-GCM-256'
+  created_by: string
+  reason: string
+  created_at: string
+}
+
+export type ConversationDeviceKey = {
+  user_id: string
+  fieldmesh_user_id: string
+  device_id: string
+  fieldmesh_device_id: string
+  label: string
+  algorithm: 'ECDH-P256'
+  public_key: string
+  fingerprint: string
+  key_version: number
 }
 
 type CloudMessageRow = {
@@ -78,25 +99,104 @@ export class InternetMessagingService {
   }
 
   async getParticipants(conversationId: string): Promise<ConversationParticipant[]> {
-    const { data, error } = await this.client.rpc('fieldmesh_conversation_participants', {
+    const { data, error } = await this.client.rpc('fieldmesh_conversation_participants_v2', {
       p_conversation_id: conversationId,
     })
     if (error) throw error
     return (data ?? []) as ConversationParticipant[]
   }
 
-  async createDirectConversation(recipientFieldMeshUserId: string): Promise<string> {
-    const value = recipientFieldMeshUserId.trim()
-    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)) {
-      throw new Error('Enter a valid FieldMesh User ID.')
-    }
+  async createDirectConversation(recipientContact: string): Promise<string> {
+    const value = recipientContact.trim()
+    if (!value) throw new Error('Enter a FieldMesh code or ID.')
 
-    const { data, error } = await this.client.rpc('fieldmesh_create_direct_conversation', {
-      p_recipient_fieldmesh_user_id: value,
+    const { data, error } = await this.client.rpc('fieldmesh_create_direct_conversation_by_contact', {
+      p_contact: value,
     })
     if (error) throw error
     if (!data || typeof data !== 'string') throw new Error('Conversation was not created.')
     return data
+  }
+
+  async createGroup(title: string, memberContacts: string[]): Promise<string> {
+    const cleanTitle = title.trim()
+    if (!cleanTitle) throw new Error('Enter a group name.')
+    const contacts = memberContacts.map((value) => value.trim()).filter(Boolean)
+    const { data, error } = await this.client.rpc('fieldmesh_create_group', {
+      p_title: cleanTitle,
+      p_member_contacts: contacts,
+    })
+    if (error) throw error
+    if (!data || typeof data !== 'string') throw new Error('Group was not created.')
+    return data
+  }
+
+  async addGroupMember(conversationId: string, contact: string): Promise<string> {
+    const { data, error } = await this.client.rpc('fieldmesh_group_add_member', {
+      p_conversation_id: conversationId,
+      p_contact: contact.trim(),
+    })
+    if (error) throw error
+    if (!data || typeof data !== 'string') throw new Error('Group member was not added.')
+    return data
+  }
+
+  async removeGroupMember(conversationId: string, userId: string): Promise<void> {
+    const { error } = await this.client.rpc('fieldmesh_group_remove_member', {
+      p_conversation_id: conversationId,
+      p_user_id: userId,
+    })
+    if (error) throw error
+  }
+
+  async setGroupAdmin(conversationId: string, userId: string, isAdmin: boolean): Promise<void> {
+    const { error } = await this.client.rpc('fieldmesh_group_set_admin', {
+      p_conversation_id: conversationId,
+      p_user_id: userId,
+      p_is_admin: isAdmin,
+    })
+    if (error) throw error
+  }
+
+  async renameGroup(conversationId: string, title: string): Promise<void> {
+    const { error } = await this.client.rpc('fieldmesh_group_rename', {
+      p_conversation_id: conversationId,
+      p_title: title.trim(),
+    })
+    if (error) throw error
+  }
+
+  async leaveGroup(conversationId: string): Promise<void> {
+    const { error } = await this.client.rpc('fieldmesh_leave_group', {
+      p_conversation_id: conversationId,
+    })
+    if (error) throw error
+  }
+
+  async currentCryptoEpoch(conversationId: string): Promise<ConversationCryptoEpoch | null> {
+    const { data, error } = await this.client.rpc('fieldmesh_current_conversation_crypto_epoch', {
+      p_conversation_id: conversationId,
+    })
+    if (error) throw error
+    return ((data ?? [])[0] as ConversationCryptoEpoch | undefined) ?? null
+  }
+
+  async rotateCryptoEpoch(conversationId: string, reason = 'manual rotation'): Promise<number> {
+    const { data, error } = await this.client.rpc('fieldmesh_rotate_conversation_crypto_epoch', {
+      p_conversation_id: conversationId,
+      p_reason: reason,
+    })
+    if (error) throw error
+    if (typeof data !== 'number') throw new Error('Crypto epoch was not rotated.')
+    return data
+  }
+
+  async conversationDeviceKeys(conversationId: string): Promise<ConversationDeviceKey[]> {
+    const { data, error } = await this.client.rpc('fieldmesh_conversation_device_keys', {
+      p_conversation_id: conversationId,
+    })
+    if (error) throw error
+    return (data ?? []) as ConversationDeviceKey[]
   }
 
   async sendText(args: {
@@ -107,7 +207,7 @@ export class InternetMessagingService {
     const text = args.text.trim()
     if (!text) throw new Error('Message cannot be empty.')
     if (text.length > MAX_CLOUD_MESSAGE_CHARS) {
-      throw new Error(`Internet messages are limited to ${MAX_CLOUD_MESSAGE_CHARS} characters in 0.5.`)
+      throw new Error(`Internet messages are limited to ${MAX_CLOUD_MESSAGE_CHARS} characters.`)
     }
 
     const logicalMessage = createTextMessage({

@@ -1,92 +1,57 @@
-# FieldMesh 0.6 — Location + SOS
+# FieldMesh 0.7 — Groups, Permissions & Crypto Foundation
 
-FieldMesh 0.6 builds field-safety workflows on top of the 0.5 Hybrid Gateway while preserving the 0.4 deterministic mesh simulator and 0.3.1 protocol/transport architecture.
+FieldMesh is a resilient messaging prototype designed around three eventual communication paths:
 
-## Current capabilities
+1. Internet → Internet
+2. LoRa mesh → LoRa mesh
+3. LoRa → Gateway → Internet (and reverse)
 
-- Installable React/TypeScript PWA with IndexedDB durability.
-- Supabase identity, devices, conversations and RLS.
-- Durable Internet direct messaging with receipts and local outbox recovery.
-- Stable logical message IDs separated from transport-frame IDs.
-- Deterministic advanced mesh failure simulator at `/simulator`.
-- Hybrid Gateway lab at `/gateway` with durable uplink/downlink queues.
-- Browser location capture and durable location history.
-- Manual location updates with `location` priority.
-- Optional 1/5/15-minute foreground periodic location sharing (no background reliability claim).
-- Emergency SOS categories, optional coordinates, optional battery context and durable lifecycle records.
-- SOS transmission without GPS.
-- Emergency-priority retry ordering.
-- Direct Internet SOS delivery simulation.
-- Radio → Gateway → Cloud SOS fallback using the 0.5 `GatewayAgent`.
-- Gateway outage/recovery reconciliation.
-- Simulated responder acknowledgement and resolution lifecycle.
-- Dedicated Location + SOS lab at `/sos`.
+0.7 keeps the validated durable messaging, mesh simulator, hybrid gateway, Location/SOS and simplified user shell while adding private group conversations, role-based group management and a deliberately staged cryptographic foundation.
 
-## Safety architecture
+## Groups
 
-```text
-                 Field user
-                    │
-           ┌────────┴─────────┐
-           │                  │
-     Direct Internet      Simulated radio
-           │                  │
-           ▼                  ▼
-   Simulated endpoint     Gateway Agent
-                              │
-                       durable uplink queue
-                              │
-                              ▼
-                      Simulated cloud endpoint
-```
+Users can create private groups from FieldMesh contact codes. Group roles are:
 
-When neither path is available, the SOS remains in durable local IndexedDB state and is retried later. Emergency traffic is retried before location traffic.
+- **Owner** — rename group, add/remove members, promote/demote admins, rotate crypto epoch metadata
+- **Admin** — rename group, add/remove ordinary members, rotate crypto epoch metadata
+- **Member** — read/send group messages and leave the group
 
-## SOS lifecycle
+The owner is protected from removal and cannot leave until an ownership-transfer flow is implemented.
+
+## Permission boundary
+
+Group-management actions are enforced in Supabase security-definer RPCs rather than trusted only to the frontend. Unrelated users cannot enumerate group members or read/send group messages through RLS.
+
+## Crypto foundation
+
+0.7 adds:
+
+- versioned **AES-GCM-256** browser envelope helpers
+- conversation/message/sender/type binding through authenticated additional data (AAD)
+- replay-window hooks keyed by conversation + logical message ID
+- conversation crypto epoch metadata
+- conversation-scoped active device public-key discovery
+- **ECDH-P256 public-key registry** for owned active devices
+- group-admin permission for epoch rotation after membership changes
+
+Important boundary: **0.7 does not claim production end-to-end encryption.** Existing cloud chat bodies are still plaintext. Supabase stores public keys and key-epoch metadata only; conversation symmetric keys and device private keys are not stored by this foundation.
+
+## Developer security diagnostics
+
+Enable Developer Mode from **Profile → Advanced app settings**, then open:
 
 ```text
-Created
-  ↓
-Queued
-  ↓
-Transmitted
-  ↓
-Received
-  ↓
-Responder acknowledged
-  ↓
-Resolved
+/developer/security
 ```
 
-GPS is optional. A missing/denied location fix never blocks SOS creation or transmission.
-
-## Permanent rules preserved
-
-- `FieldMeshUserId != RadioNodeId`.
-- Message is durable before relying on transport recovery.
-- Same logical `messageId` is preserved across transport changes.
-- New RF attempts may use new `frameId` values.
-- Gateway acceptance is not application/cloud receipt.
-- SOS priority is higher than control, location and normal chat.
-- Stale safety traffic expires instead of being resurrected after recovery.
-- Simulator and gateway radio paths are software-only; no physical LoRa is claimed.
-- PWA foreground/background limitations remain explicit until native Android support.
-
-## 0.6 local persistence
-
-Dexie schema version 4 adds:
-
-- `locationFixes`
-- `locationShares`
-- `sosRecords`
-- `sosEvents`
-
-No new Supabase migration is added in 0.6. Cloud responder authorization is intentionally deferred until the 0.7 group/permission security model exists.
+The page can run a local AES-GCM authenticated-encryption self-check and explains the current security boundary.
 
 ## Validation
 
 ```bash
 npm run check
+npm run test:crypto
+npm run test:ui
 npm run test:sos
 npm run test:gateway
 npm run test:mesh
@@ -94,13 +59,14 @@ npx supabase db reset
 npm run test:local
 ```
 
-## Architecture documentation
+0.7 adds this Supabase migration:
 
-- `docs/PROTOCOL_TRANSPORT.md` — logical-message and transport-frame boundaries.
-- `docs/MESH_SIMULATOR.md` — deterministic mesh simulator semantics.
-- `docs/HYBRID_GATEWAY.md` — gateway durability, routing and recovery semantics.
-- `docs/LOCATION_SOS.md` — 0.6 location, emergency priority, lifecycle and hybrid delivery semantics.
+```text
+20260924000200_groups_permissions_crypto_foundation.sql
+```
 
-## Next release
+After all local validation passes:
 
-FieldMesh 0.7 can build Groups + Permissions + Crypto Foundation: group/broadcast/emergency conversations, responder authorization, device/key revocation foundations, replay protection and an end-to-end encryption design that keeps gateway/cloud infrastructure outside plaintext message content.
+```bash
+npx supabase db push
+```

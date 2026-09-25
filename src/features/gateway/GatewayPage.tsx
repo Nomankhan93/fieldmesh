@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Link } from '@tanstack/react-router'
 import {
   SimulatedGatewayCloudAdapter,
   SimulatedGatewayRadioAdapter,
@@ -170,17 +169,11 @@ export function GatewayPage() {
     <main className="mx-auto max-w-[1500px] p-4 sm:p-6 lg:p-8">
       <header className="mb-6 flex flex-wrap items-start justify-between gap-4">
         <div>
-          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">FieldMesh 0.6</p>
-          <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-950">Hybrid Gateway Prototype</h1>
+          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">FieldMesh 0.7.0 · Developer tools</p>
+          <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-950">Hybrid gateway lab</h1>
           <p className="mt-2 max-w-4xl text-sm leading-6 text-slate-600">
             Durable LoRa-side ↔ Internet/cloud bridging with queue recovery, duplicate suppression and a routing registry. The radio and cloud adapters on this page are simulated; no physical transmission occurs.
           </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Link to="/" className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold">Identity</Link>
-          <Link to="/messages" className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold">Messages</Link>
-          <Link to="/simulator" className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold">Mesh lab</Link>
-          <Link to="/sos" className="rounded-xl border border-rose-300 bg-rose-50 px-3 py-2 text-sm font-semibold text-rose-800">Location + SOS</Link>
         </div>
       </header>
 
