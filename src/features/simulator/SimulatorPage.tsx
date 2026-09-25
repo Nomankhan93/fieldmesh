@@ -178,7 +178,7 @@ export function SimulatorPage() {
     <main className="mx-auto max-w-[1600px] p-4 sm:p-6 lg:p-8">
       <header className="mb-6 flex flex-wrap items-start justify-between gap-4">
         <div>
-          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">FieldMesh 0.8.0 · Developer tools</p>
+          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">ConnectX 0.8.1 · Developer tools</p>
           <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-950">Mesh simulation lab</h1>
           <p className="mt-2 max-w-4xl text-sm leading-6 text-slate-600">
             Deterministic virtual-time mesh diagnostics with interactive topology, scenario verdicts, node/link inspection and trace filtering. Simulated radio — no physical transmission.
@@ -452,7 +452,7 @@ function TopologyGraph({
 }) {
   return (
     <div className="min-h-[360px] overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 p-2 sm:min-h-[460px]">
-      <svg viewBox="0 0 960 520" className="h-full min-h-[340px] w-full sm:min-h-[440px]" role="img" aria-label="FieldMesh simulated network topology">
+      <svg viewBox="0 0 960 520" className="h-full min-h-[340px] w-full sm:min-h-[440px]" role="img" aria-label="ConnectX simulated network topology">
         <defs>
           <filter id="node-shadow" x="-20%" y="-20%" width="140%" height="140%">
             <feDropShadow dx="0" dy="3" stdDeviation="4" floodOpacity="0.12" />

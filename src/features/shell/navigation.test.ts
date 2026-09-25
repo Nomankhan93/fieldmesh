@@ -7,7 +7,7 @@ import {
   isNavItemActive,
 } from './navigation'
 
-describe('FieldMesh product navigation', () => {
+describe('ConnectX product navigation', () => {
   it('keeps engineering tools out of the normal user navigation', () => {
     expect(USER_NAV_ITEMS.map((item) => item.to)).toEqual([
       '/',

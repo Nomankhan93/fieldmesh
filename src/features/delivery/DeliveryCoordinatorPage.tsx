@@ -46,7 +46,7 @@ export function DeliveryCoordinatorPage() {
         <p className="text-sm font-semibold uppercase tracking-[0.16em] text-amber-700">Developer tools</p>
         <h1 className="mt-1 text-3xl font-black tracking-tight">Delivery coordinator</h1>
         <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
-          Inspect the canonical logical-message queue and path attempts introduced in FieldMesh 0.8.0. Normal users do not select transports manually.
+          Inspect the canonical logical-message queue and path attempts introduced in ConnectX 0.8.1. Normal users do not select transports manually.
         </p>
       </header>
 

@@ -8,7 +8,7 @@ export type FieldMeshNavItem = {
 }
 
 export const USER_NAV_ITEMS: FieldMeshNavItem[] = [
-  { label: 'Home', to: '/', description: 'Simple FieldMesh overview', icon: 'home' },
+  { label: 'Home', to: '/', description: 'ConnectX overview', icon: 'home' },
   { label: 'Chats', to: '/messages', description: 'Messages and conversations', icon: 'chats' },
   { label: 'SOS', to: '/sos', description: 'Emergency and location tools', icon: 'sos' },
   { label: 'Network', to: '/network', description: 'Connection status in plain language', icon: 'network' },

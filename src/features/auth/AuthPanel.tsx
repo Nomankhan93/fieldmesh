@@ -48,7 +48,7 @@ export function AuthPanel() {
   }
 
   return (
-    <section className="mx-auto max-w-md rounded-2xl border border-slate-200 bg-white p-6">
+    <section className="mx-auto max-w-md rounded-3xl border border-blue-100 bg-white p-6 shadow-[0_18px_60px_rgba(30,64,175,0.10)]">
       <div className="flex rounded-xl bg-slate-100 p-1">
         <button
           type="button"
@@ -71,7 +71,7 @@ export function AuthPanel() {
           <label className="block text-sm font-medium">
             Display name
             <input
-              className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5 outline-none focus:border-slate-700"
+              className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5 outline-none focus:border-blue-600"
               value={displayName}
               onChange={(event) => setDisplayName(event.target.value)}
               autoComplete="name"
@@ -84,7 +84,7 @@ export function AuthPanel() {
         <label className="block text-sm font-medium">
           Email
           <input
-            className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5 outline-none focus:border-slate-700"
+            className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5 outline-none focus:border-blue-600"
             type="email"
             value={email}
             onChange={(event) => setEmail(event.target.value)}
@@ -96,7 +96,7 @@ export function AuthPanel() {
         <label className="block text-sm font-medium">
           Password
           <input
-            className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5 outline-none focus:border-slate-700"
+            className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5 outline-none focus:border-blue-600"
             type="password"
             value={password}
             onChange={(event) => setPassword(event.target.value)}
@@ -107,7 +107,7 @@ export function AuthPanel() {
         </label>
 
         <button
-          className="w-full rounded-xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white disabled:opacity-50"
+          className="w-full rounded-xl bg-gradient-to-r from-cyan-500 via-blue-600 to-violet-700 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:brightness-105 disabled:opacity-50"
           type="submit"
           disabled={busy}
         >

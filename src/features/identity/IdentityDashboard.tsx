@@ -139,7 +139,7 @@ export function IdentityDashboard() {
     if (!profile) return
     try {
       await navigator.clipboard.writeText(formatFieldMeshCode(profile.fieldmesh_user_id))
-      setNotice('FieldMesh code copied.')
+      setNotice('ConnectX code copied.')
     } catch {
       setNotice('Clipboard access is unavailable in this browser.')
     }
@@ -153,7 +153,7 @@ export function IdentityDashboard() {
     })
     try {
       if (navigator.share) {
-        await navigator.share({ title: 'FieldMesh contact', text })
+        await navigator.share({ title: 'ConnectX contact', text })
         setNotice('Contact share sheet opened.')
       } else {
         await navigator.clipboard.writeText(text)
@@ -175,18 +175,18 @@ export function IdentityDashboard() {
       <header>
         <p className="text-sm font-semibold uppercase tracking-[0.16em] text-slate-500">Profile</p>
         <h1 className="mt-1 text-3xl font-bold tracking-tight">Profile & devices</h1>
-        <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">Manage your account, share your FieldMesh contact code and prepare compatible radio devices.</p>
+        <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">Manage your account, share your ConnectX contact code and prepare compatible radio devices.</p>
       </header>
 
       <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-500">Signed in</p>
-            <h2 className="mt-1 text-2xl font-bold">{profile?.display_name ?? 'FieldMesh user'}</h2>
+            <h2 className="mt-1 text-2xl font-bold">{profile?.display_name ?? 'ConnectX user'}</h2>
             <p className="mt-1 text-sm text-slate-500">{authenticatedEmail}</p>
           </div>
           <div className="min-w-[220px] rounded-xl border border-slate-200 bg-slate-50 p-4">
-            <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Your FieldMesh code</p>
+            <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Your ConnectX code</p>
             <p className="mt-1 font-mono text-lg font-bold tracking-wide text-slate-900">{contactCode}</p>
             <div className="mt-3 flex flex-wrap gap-2">
               <button type="button" disabled={!profile} onClick={() => void copyContactCode()} className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-bold disabled:opacity-50">Copy code</button>
@@ -215,7 +215,7 @@ export function IdentityDashboard() {
                 <p className="mt-1 text-xs leading-5 text-slate-500">Camera QR scanning is not enabled yet. This payload contract is ready for the mobile scanner phase.</p>
               </div>
               <div>
-                <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Technical FieldMesh User ID</p>
+                <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Technical identity ID</p>
                 <p className="mt-1 break-all font-mono text-xs text-slate-700">{profile.fieldmesh_user_id}</p>
               </div>
             </div>
@@ -227,7 +227,7 @@ export function IdentityDashboard() {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="text-xl font-bold">My devices</h2>
-            <p className="mt-1 text-sm text-slate-500">Add and manage FieldMesh radio devices. Bluetooth/LoRa pairing will be enabled in the hardware-integration phase.</p>
+            <p className="mt-1 text-sm text-slate-500">Add and manage ConnectX radio devices. Bluetooth/LoRa pairing will be enabled in the hardware-integration phase.</p>
           </div>
           <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700">{devices.filter((item) => item.status === 'active').length} active</span>
         </div>
@@ -239,7 +239,7 @@ export function IdentityDashboard() {
 
         <div className="mt-4 space-y-3">
           {devices.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-slate-300 p-5 text-sm text-slate-500">No FieldMesh radio devices added yet.</div>
+            <div className="rounded-xl border border-dashed border-slate-300 p-5 text-sm text-slate-500">No ConnectX radio devices added yet.</div>
           ) : devices.map((device) => (
             <article key={device.id} className="flex flex-col gap-3 rounded-xl border border-slate-200 p-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="min-w-0">
@@ -264,7 +264,7 @@ export function IdentityDashboard() {
         <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-sm font-bold">Developer mode</p>
-            <p className="mt-1 max-w-xl text-xs leading-5 text-slate-500">Shows Mesh Lab, Gateway Lab and protocol diagnostics. Keep this off for normal FieldMesh use.</p>
+            <p className="mt-1 max-w-xl text-xs leading-5 text-slate-500">Shows Mesh Lab, Gateway Lab and protocol diagnostics. Keep this off for normal ConnectX use.</p>
           </div>
           <label className="inline-flex items-center gap-2 text-sm font-semibold text-slate-700">
             <input type="checkbox" checked={developerMode} onChange={(event) => setDeveloperMode(event.target.checked)} className="h-5 w-5" />

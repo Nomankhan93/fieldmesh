@@ -15,7 +15,7 @@ export function describeConnection(inputs: ConnectionInputs): ConnectionSummary 
   if (inputs.internet) {
     return {
       title: 'Internet messaging is available',
-      detail: 'FieldMesh can synchronize chats through the Internet now.',
+      detail: 'ConnectX can synchronize chats through the Internet now.',
       mode: 'internet',
       canCommunicate: true,
     }
@@ -31,7 +31,7 @@ export function describeConnection(inputs: ConnectionInputs): ConnectionSummary 
   if (inputs.radio) {
     return {
       title: 'Local mesh messaging is available',
-      detail: 'Internet is offline, but nearby FieldMesh radio users can still be reachable.',
+      detail: 'Internet is offline, but nearby ConnectX radio users can still be reachable.',
       mode: 'radio',
       canCommunicate: true,
     }

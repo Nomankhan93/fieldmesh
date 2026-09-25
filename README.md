@@ -1,6 +1,6 @@
-# FieldMesh 0.8.1 — True Offline Conversation Workspace
+# ConnectX 0.8.1 — True Offline Conversation Workspace
 
-FieldMesh is a resilient messaging prototype designed around three eventual communication paths:
+ConnectX is the user-facing brand for the resilient messaging platform. The validated internal protocol and database identifiers continue to use the FieldMesh name for backward compatibility. The platform is designed around three eventual communication paths:
 
 1. Internet → Internet
 2. LoRa mesh → LoRa mesh

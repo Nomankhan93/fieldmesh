@@ -169,7 +169,7 @@ export function GatewayPage() {
     <main className="mx-auto max-w-[1500px] p-4 sm:p-6 lg:p-8">
       <header className="mb-6 flex flex-wrap items-start justify-between gap-4">
         <div>
-          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">FieldMesh 0.8.0 · Developer tools</p>
+          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">ConnectX 0.8.1 · Developer tools</p>
           <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-950">Hybrid gateway lab</h1>
           <p className="mt-2 max-w-4xl text-sm leading-6 text-slate-600">
             Durable LoRa-side ↔ Internet/cloud bridging with queue recovery, duplicate suppression and a routing registry. The radio and cloud adapters on this page are simulated; no physical transmission occurs.

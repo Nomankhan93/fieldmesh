@@ -222,7 +222,7 @@ export function MessagingPage() {
       setRecipientId(normalizeContactInput(await navigator.clipboard.readText()))
       setNotice('Contact pasted. Review the code, then start the chat.')
     } catch {
-      setNotice('Clipboard read access is unavailable. Paste the FieldMesh code manually.')
+      setNotice('Clipboard read access is unavailable. Paste the ConnectX code manually.')
     }
   }
 
@@ -234,7 +234,7 @@ export function MessagingPage() {
     }
     const contact = normalizeContactInput(recipientId)
     if (!isValidContactInput(contact)) {
-      setNotice('Enter a valid FieldMesh code such as FM-12AB34CD56EF, a shared contact link, or a technical FieldMesh ID.')
+      setNotice('Enter a valid ConnectX code such as FM-12AB34CD56EF, a shared contact link, or a technical identity ID.')
       return
     }
     setBusy(true)
@@ -264,7 +264,7 @@ export function MessagingPage() {
     }
     const invalid = contacts.find((contact) => !isValidContactInput(contact))
     if (invalid) {
-      setNotice(`Invalid FieldMesh contact: ${invalid}`)
+      setNotice(`Invalid ConnectX contact: ${invalid}`)
       return
     }
     setBusy(true)
@@ -326,7 +326,7 @@ export function MessagingPage() {
 
             {composerMode === 'direct' ? (
               <form className="mt-4 space-y-2" onSubmit={createDirectConversation}>
-                <p className="text-xs leading-5 text-slate-500">Ask the other person for their FieldMesh code from Profile → Share contact.</p>
+                <p className="text-xs leading-5 text-slate-500">Ask the other person for their ConnectX code from Profile → Share contact.</p>
                 <input className="w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm uppercase placeholder:normal-case" placeholder="FM-12AB34CD56EF" value={recipientId} onChange={(event) => setRecipientId(event.target.value)} onBlur={() => setRecipientId((current) => normalizeContactInput(current))} autoCapitalize="characters" required />
                 <div className="grid grid-cols-2 gap-2">
                   <button type="button" onClick={() => void pasteContact()} className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700">Paste</button>
@@ -336,7 +336,7 @@ export function MessagingPage() {
               </form>
             ) : (
               <form className="mt-4 space-y-2" onSubmit={createGroup}>
-                <p className="text-xs leading-5 text-slate-500">Create a private group and invite people with FieldMesh codes. You become the owner.</p>
+                <p className="text-xs leading-5 text-slate-500">Create a private group and invite people with ConnectX codes. You become the owner.</p>
                 <input className="w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm" placeholder="Group name" value={groupTitle} onChange={(event) => setGroupTitle(event.target.value)} maxLength={120} required />
                 <textarea className="min-h-24 w-full rounded-xl border border-slate-300 p-3 text-sm uppercase placeholder:normal-case" placeholder={'Member codes, one per line\nFM-12AB34CD56EF'} value={groupMembers} onChange={(event) => setGroupMembers(event.target.value)} />
                 <button className="w-full rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50" disabled={busy || !browserOnline || !groupTitle.trim()}>Create group</button>
@@ -346,7 +346,7 @@ export function MessagingPage() {
             {showQrFoundation && composerMode === 'direct' ? (
               <div className="mt-3 rounded-xl border border-dashed border-slate-300 bg-slate-50 p-3 text-xs leading-5 text-slate-600">
                 <p className="font-bold text-slate-800">QR contact discovery foundation</p>
-                <p className="mt-1">FieldMesh understands <code className="rounded bg-white px-1">fieldmesh://contact/FM-…</code> payloads. Camera scanning will be connected in the mobile/hardware phase.</p>
+                <p className="mt-1">ConnectX accepts shared contact links and FM compatibility codes. Camera scanning will be connected in the mobile/hardware phase.</p>
               </div>
             ) : null}
           </section>
@@ -387,7 +387,7 @@ export function MessagingPage() {
               <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 p-4">
                 <div className="flex min-w-0 items-center gap-3">
                   <button type="button" onClick={() => setSelectedConversationId(null)} className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-bold text-slate-600 lg:hidden">Back</button>
-                  <div className="min-w-0"><h2 className="truncate font-semibold">{conversationLabel(selectedConversation)}</h2><p className="mt-0.5 text-xs text-slate-500">{selectedConversation.kind === 'group' ? `${selectedParticipants.length} members · private group` : 'Direct FieldMesh chat'}</p></div>
+                  <div className="min-w-0"><h2 className="truncate font-semibold">{conversationLabel(selectedConversation)}</h2><p className="mt-0.5 text-xs text-slate-500">{selectedConversation.kind === 'group' ? `${selectedParticipants.length} members · private group` : 'Direct ConnectX chat'}</p></div>
                 </div>
                 {selectedConversation.kind === 'group' ? <button type="button" onClick={() => setShowGroupManager((current) => !current)} className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-bold text-slate-700">{showGroupManager ? 'Close group settings' : 'Group settings'}</button> : null}
               </div>

@@ -6,7 +6,7 @@ export function DeveloperHomePage() {
       <header>
         <p className="text-sm font-semibold uppercase tracking-[0.16em] text-amber-700">Developer tools</p>
         <h1 className="mt-1 text-3xl font-black tracking-tight">Network diagnostics</h1>
-        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">These tools exist for FieldMesh engineering, simulation and failure testing. They are intentionally separated from the normal user experience.</p>
+        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">These tools exist for ConnectX engineering, simulation and failure testing. They are intentionally separated from the normal user experience.</p>
       </header>
 
       <section className="mt-6 grid gap-4 md:grid-cols-2">
@@ -19,7 +19,7 @@ export function DeveloperHomePage() {
 
       <section className="mt-5 rounded-2xl border border-slate-200 bg-white p-5">
         <h2 className="font-bold">What is not a user feature</h2>
-        <p className="mt-2 text-sm leading-6 text-slate-600">Seeds, packet timelines, node inspectors, queue depth, routing registry and adapter toggles are diagnostic controls. Normal FieldMesh users should only see chats, SOS, network status, devices and profile settings.</p>
+        <p className="mt-2 text-sm leading-6 text-slate-600">Seeds, packet timelines, node inspectors, queue depth, routing registry and adapter toggles are diagnostic controls. Normal ConnectX users should only see chats, SOS, network status, devices and profile settings.</p>
       </section>
     </main>
   )

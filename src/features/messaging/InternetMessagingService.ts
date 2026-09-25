@@ -223,7 +223,7 @@ export class InternetMessagingService {
 
   async createDirectConversation(recipientContact: string): Promise<string> {
     const value = recipientContact.trim()
-    if (!value) throw new Error('Enter a FieldMesh code or ID.')
+    if (!value) throw new Error('Enter a ConnectX code or ID.')
 
     const { data, error } = await this.client.rpc('fieldmesh_create_direct_conversation_by_contact', {
       p_contact: value,

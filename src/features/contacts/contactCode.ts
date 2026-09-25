@@ -31,5 +31,5 @@ export function buildContactDeepLink(fieldMeshUserId: string): string {
 
 export function buildContactShareText(args: { displayName: string; fieldMeshUserId: string }): string {
   const code = formatFieldMeshCode(args.fieldMeshUserId)
-  return `${args.displayName} on FieldMesh\nCode: ${code}\n${buildContactDeepLink(args.fieldMeshUserId)}`
+  return `${args.displayName} on ConnectX\nCode: ${code}\n${buildContactDeepLink(args.fieldMeshUserId)}`
 }

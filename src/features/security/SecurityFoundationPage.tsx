@@ -37,7 +37,7 @@ export function SecurityFoundationPage() {
       <header>
         <p className="text-sm font-semibold uppercase tracking-[0.16em] text-amber-700">Developer tools</p>
         <h1 className="mt-1 text-3xl font-black tracking-tight">Crypto foundation</h1>
-        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">FieldMesh 0.7 establishes versioned encryption envelopes, key-epoch metadata, device public-key discovery and replay-protection hooks. Production end-to-end encryption is not enabled yet.</p>
+        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">ConnectX security foundation provides versioned encryption envelopes, key-epoch metadata, device public-key discovery and replay-protection hooks. Production end-to-end encryption is not enabled yet.</p>
       </header>
 
       <section className="mt-6 grid gap-4 md:grid-cols-2">

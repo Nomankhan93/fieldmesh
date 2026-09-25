@@ -2,16 +2,25 @@
 
 :root {
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  color: #111827;
-  background: #f8fafc;
+  color: #0f172a;
+  background: #f7f9ff;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
+  --connectx-navy: #07113f;
+  --connectx-cyan: #08d9ff;
+  --connectx-blue: #1769ff;
+  --connectx-violet: #7c2cff;
+}
+
+html {
+  background: #030a30;
 }
 
 body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
+  background: #f7f9ff;
 }
 
 button,
@@ -19,4 +28,8 @@ input,
 select,
 textarea {
   font: inherit;
+}
+
+::selection {
+  background: rgba(23, 105, 255, 0.22);
 }
