@@ -31,9 +31,9 @@ The browser does not need a successful conversation-list request before showing 
 
 ## Authoritative reconciliation
 
-A successful remote workspace sync is authoritative. FieldMesh fetches the complete visible conversation list and the participants for each conversation before committing the new snapshot locally.
+A remote list response is no longer treated as destructive authority by itself. ConnectX fetches the visible conversation list and participants, but any previously cached conversation missing from that list is point-read again under RLS before reconciliation. If the point read still sees the conversation it is recovered into the snapshot; only confirmed loss of access triggers local purge. Participant snapshots must also include the signed-in user before the replacement snapshot can commit.
 
-If a previously cached conversation is no longer visible after a complete successful sync, the local workspace entry, participant cache, sync cursor and locally queued/cached records for that conversation are purged. This prevents a removed/left group from remaining available through the normal offline UI after the device has learned the authoritative membership change.
+This protects the offline workspace from transient incomplete/stale list responses while still removing a conversation after the device has positively learned an authoritative membership/access change. Explicit group leave continues to purge immediately.
 
 A failed/partial remote fetch does **not** replace the last successful local snapshot. `workspaceSyncState` records the error while the cached workspace stays usable.
 
@@ -63,7 +63,7 @@ Those operations remain server-authoritative because they depend on identity, RL
 
 ## Message sync cursors
 
-`workspaceSyncCursors` record the latest server message observed and the last successful per-conversation message sync. 0.8.1 keeps full message fetch semantics for reliability; the cursor is established now so later alpha patches can move to incremental synchronization without changing the local workspace contract.
+`workspaceSyncCursors` record the latest server message observed and the last successful per-conversation message sync. Starting with the 0.8.1.3 reliability hotfix, ConnectX uses the server timestamp + message ID cursor for incremental message queries. Rows sharing the cursor timestamp are re-read and disambiguated by message ID so no same-timestamp message is skipped.
 
 ## Developer diagnostics
 

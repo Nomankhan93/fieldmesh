@@ -6,6 +6,7 @@ import {
   workspaceAvailability,
   type WorkspaceSyncStateRecord,
 } from '../../core/workspace/model'
+import { BACKGROUND_WORKSPACE_SYNC_INTERVAL_MS } from '../../core/workspace/syncPolicy'
 import { useAuth } from '../auth/AuthProvider'
 import { supabase } from '../../lib/supabase'
 import { db, type CloudMessageRecord, type CloudReceiptRecord } from '../../offline/db'
@@ -142,7 +143,7 @@ export function MessagingPage() {
     if (!service || !localUserId) return
     const timer = window.setInterval(() => {
       if (navigator.onLine) void refresh().catch(() => undefined)
-    }, 3_000)
+    }, BACKGROUND_WORKSPACE_SYNC_INTERVAL_MS)
     const handleOnline = () => {
       setBrowserOnline(true)
       setNotice('Connection restored. Synchronizing the offline workspace…')

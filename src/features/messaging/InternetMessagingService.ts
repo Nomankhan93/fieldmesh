@@ -4,11 +4,16 @@ import { DeliveryCoordinator } from '../../core/delivery/coordinator'
 import { DexieDeliveryStore } from '../../core/delivery/dexieStore'
 import { InternetDeliveryAdapter, MAX_CLOUD_MESSAGE_CHARS } from '../../core/delivery/internetAdapter'
 import {
-  removedConversationIds,
   toWorkspaceConversationRecord,
   toWorkspaceParticipantRecord,
   workspaceCursorKey,
 } from '../../core/workspace/model'
+import {
+  SingleFlight,
+  participantSnapshotIncludesUser,
+  reconcileConversationSnapshot,
+  rowsAfterCursor,
+} from '../../core/workspace/syncPolicy'
 import {
   db,
   type CloudMessageRecord,
@@ -91,6 +96,8 @@ function isDuplicateError(error: { code?: string } | null) {
 export class InternetMessagingService {
   private readonly client: SupabaseClient
   private readonly deliveryCoordinator: DeliveryCoordinator
+  private readonly workspaceSync = new SingleFlight<string, InternetConversation[]>()
+  private readonly conversationSync = new SingleFlight<string, void>()
 
   constructor(client: SupabaseClient) {
     this.client = client
@@ -119,6 +126,10 @@ export class InternetMessagingService {
   }
 
   async syncWorkspace(localUserId: string): Promise<InternetConversation[]> {
+    return this.workspaceSync.run(localUserId, () => this.performWorkspaceSync(localUserId))
+  }
+
+  private async performWorkspaceSync(localUserId: string): Promise<InternetConversation[]> {
     const attemptAt = Date.now()
     const previousState = await db.workspaceSyncState.get(localUserId)
     await db.workspaceSyncState.put({
@@ -131,24 +142,36 @@ export class InternetMessagingService {
     })
 
     try {
-      const conversations = await this.listConversations()
-      const participantsByConversation = new Map<string, ConversationParticipant[]>()
-      for (const conversation of conversations) {
-        participantsByConversation.set(
-          conversation.id,
-          await this.getParticipants(conversation.id),
-        )
-      }
-
-      const syncedAt = Date.now()
+      const listedConversations = await this.listConversations()
       const existingConversations = await db.workspaceConversations
         .where('localUserId')
         .equals(localUserId)
         .toArray()
-      const removedIds = removedConversationIds(
-        existingConversations.map((conversation) => conversation.id),
-        conversations.map((conversation) => conversation.id),
+
+      // A list response is not destructive authority by itself. If a previously cached
+      // conversation is missing, point-read it under RLS first. This prevents a transient
+      // incomplete snapshot from deleting the local conversation and its queued messages.
+      const reconciled = await reconcileConversationSnapshot({
+        existingConversationIds: existingConversations.map((conversation) => conversation.id),
+        listedConversations,
+        lookupMissingConversation: (conversationId) => this.getConversationIfAccessible(conversationId),
+      })
+      const confirmedRemovedIds = reconciled.confirmedRemovedIds
+      const conversations = reconciled.conversations.sort(
+        (a, b) => Date.parse(b.updated_at) - Date.parse(a.updated_at) || a.id.localeCompare(b.id),
       )
+      const participantsByConversation = new Map<string, ConversationParticipant[]>()
+      for (const conversation of conversations) {
+        const participants = await this.getParticipants(conversation.id)
+        if (!participantSnapshotIncludesUser(participants, localUserId)) {
+          throw new Error(
+            `Incomplete participant snapshot for conversation ${conversation.id}; keeping the last good local workspace.`,
+          )
+        }
+        participantsByConversation.set(conversation.id, participants)
+      }
+
+      const syncedAt = Date.now()
       const conversationRecords = conversations.map((conversation) =>
         toWorkspaceConversationRecord({ localUserId, conversation, syncedAt }),
       )
@@ -192,7 +215,7 @@ export class InternetMessagingService {
             if (records.length > 0) await db.workspaceParticipants.bulkPut(records)
           }
 
-          for (const conversationId of removedIds) {
+          for (const conversationId of confirmedRemovedIds) {
             await this.purgeLocalConversation(localUserId, conversationId)
           }
 
@@ -219,6 +242,20 @@ export class InternetMessagingService {
       })
       throw error
     }
+  }
+
+  private async getConversationIfAccessible(
+    conversationId: string,
+  ): Promise<InternetConversation | null> {
+    const { data, error } = await this.client
+      .from('conversations')
+      .select('id, kind, title, created_by, created_at, updated_at')
+      .eq('id', conversationId)
+      .limit(1)
+
+    if (error) throw error
+    const row = (data ?? [])[0] as InternetConversation | undefined
+    return row ?? null
   }
 
   async createDirectConversation(recipientContact: string): Promise<string> {
@@ -376,16 +413,32 @@ export class InternetMessagingService {
   }
 
   async syncConversation(conversationId: string, localUserId: string): Promise<void> {
+    const key = `${localUserId}:${conversationId}`
+    return this.conversationSync.run(key, () => this.performConversationSync(conversationId, localUserId))
+  }
+
+  private async performConversationSync(conversationId: string, localUserId: string): Promise<void> {
+    const cursor = await db.workspaceSyncCursors.get(workspaceCursorKey(localUserId, conversationId))
     const nowIso = new Date().toISOString()
-    const { data, error } = await this.client
+    let query = this.client
       .from('messages')
       .select('id, conversation_id, sender_id, body, client_created_at, created_at, expires_at')
       .eq('conversation_id', conversationId)
       .gt('expires_at', nowIso)
+
+    if (cursor?.lastServerCreatedAt) {
+      // Include the cursor timestamp again, then apply the compound timestamp/message-id
+      // cursor locally so messages sharing the same server timestamp cannot be skipped.
+      query = query.gte('created_at', cursor.lastServerCreatedAt)
+    }
+
+    const { data, error } = await query
       .order('created_at', { ascending: true })
+      .order('id', { ascending: true })
 
     if (error) throw error
-    const rows = (data ?? []) as CloudMessageRow[]
+    const fetchedRows = (data ?? []) as CloudMessageRow[]
+    const rows = rowsAfterCursor(fetchedRows, cursor)
 
     for (const row of rows) {
       const existing = await db.cloudMessages.get(localMessageKey(localUserId, row.id))
@@ -424,15 +477,49 @@ export class InternetMessagingService {
       }
     }
 
-    if (rows.length > 0) {
-      const messageIds = rows.map((row) => row.id)
-      const { data: receiptData, error: receiptError } = await this.client
+    await this.syncReceiptsForConversation(conversationId, localUserId)
+
+    const latestRow = rows.length > 0 ? rows[rows.length - 1] : undefined
+    await db.workspaceSyncCursors.put({
+      localKey: workspaceCursorKey(localUserId, conversationId),
+      localUserId,
+      conversationId,
+      ...(latestRow?.created_at
+        ? { lastServerCreatedAt: latestRow.created_at, lastMessageId: latestRow.id }
+        : cursor?.lastServerCreatedAt
+          ? {
+              lastServerCreatedAt: cursor.lastServerCreatedAt,
+              ...(cursor.lastMessageId ? { lastMessageId: cursor.lastMessageId } : {}),
+            }
+          : {}),
+      lastSyncedAt: Date.now(),
+    })
+  }
+
+  private async syncReceiptsForConversation(
+    conversationId: string,
+    localUserId: string,
+  ): Promise<void> {
+    const localMessages = await db.cloudMessages
+      .where('[localUserId+conversationId]')
+      .equals([localUserId, conversationId])
+      .toArray()
+    const messageIds = localMessages.map((message) => message.id)
+    if (messageIds.length === 0) return
+
+    const receipts: ReceiptRow[] = []
+    const batchSize = 100
+    for (let index = 0; index < messageIds.length; index += batchSize) {
+      const batch = messageIds.slice(index, index + batchSize)
+      const { data, error } = await this.client
         .from('message_receipts')
         .select('message_id, user_id, receipt_type, created_at')
-        .in('message_id', messageIds)
+        .in('message_id', batch)
+      if (error) throw error
+      receipts.push(...((data ?? []) as ReceiptRow[]))
+    }
 
-      if (receiptError) throw receiptError
-      const receipts = (receiptData ?? []) as ReceiptRow[]
+    if (receipts.length > 0) {
       await db.cloudReceipts.bulkPut(
         receipts.map((receipt) => ({
           localKey: localReceiptKey(
@@ -449,28 +536,9 @@ export class InternetMessagingService {
           createdAt: Date.parse(receipt.created_at),
         } satisfies CloudReceiptRecord)),
       )
-
-      await this.refreshDerivedStates(localUserId, rows.map((row) => row.id))
     }
 
-    const previousCursor = await db.workspaceSyncCursors.get(
-      workspaceCursorKey(localUserId, conversationId),
-    )
-    const latestRow = rows.length > 0 ? rows[rows.length - 1] : undefined
-    await db.workspaceSyncCursors.put({
-      localKey: workspaceCursorKey(localUserId, conversationId),
-      localUserId,
-      conversationId,
-      ...(latestRow?.created_at
-        ? { lastServerCreatedAt: latestRow.created_at, lastMessageId: latestRow.id }
-        : previousCursor?.lastServerCreatedAt
-          ? {
-              lastServerCreatedAt: previousCursor.lastServerCreatedAt,
-              ...(previousCursor.lastMessageId ? { lastMessageId: previousCursor.lastMessageId } : {}),
-            }
-          : {}),
-      lastSyncedAt: Date.now(),
-    })
+    await this.refreshDerivedStates(localUserId, messageIds)
   }
 
   async syncAll(conversationIds: string[], localUserId: string): Promise<void> {
@@ -493,7 +561,7 @@ export class InternetMessagingService {
       await this.ensureReceipt(message.id, localUserId, 'read')
     }
 
-    await this.syncConversation(conversationId, localUserId)
+    await this.syncReceiptsForConversation(conversationId, localUserId)
   }
 
   private async purgeLocalConversation(localUserId: string, conversationId: string): Promise<void> {

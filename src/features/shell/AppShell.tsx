@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, Outlet, useRouterState } from '@tanstack/react-router'
+import { Link, Outlet, useNavigate, useRouterState } from '@tanstack/react-router'
 import { APP_BRAND } from '../../config/brand'
 import { useAuth } from '../auth/AuthProvider'
 import { NavIcon } from './NavIcon'
@@ -87,8 +87,9 @@ function BrandIdentity({ compact = false, inverted = false }: { compact?: boolea
 }
 
 export function AppShell() {
-  const { session } = useAuth()
+  const { session, loading } = useAuth()
   const pwa = usePwa()
+  const navigate = useNavigate()
   const pathname = useRouterState({ select: (state) => state.location.pathname })
   const developer = isDeveloperPath(pathname)
   const [developerMode, setDeveloperMode] = useState(readDeveloperMode)
@@ -96,12 +97,36 @@ export function AppShell() {
 
   useEffect(() => subscribeDeveloperMode(setDeveloperMode), [])
 
+  useEffect(() => {
+    if (!loading && !session && pathname !== '/') {
+      void navigate({ to: '/', replace: true })
+    }
+  }, [loading, navigate, pathname, session])
+
   function toggleSidebar() {
     setCollapsed((current) => {
       const next = !current
       window.localStorage.setItem(SIDEBAR_KEY, next ? '1' : '0')
       return next
     })
+  }
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#f7f9ff]">
+        <div className="rounded-2xl border border-blue-100 bg-white px-6 py-5 text-sm font-medium text-slate-500 shadow-sm">
+          Checking session…
+        </div>
+      </div>
+    )
+  }
+
+  if (!session && pathname !== '/') {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#f7f9ff]">
+        <div className="text-sm font-medium text-slate-500">Returning to sign in…</div>
+      </div>
+    )
   }
 
   if (!session) {

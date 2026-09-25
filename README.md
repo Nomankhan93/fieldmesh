@@ -1,6 +1,13 @@
-# ConnectX 0.8.1 — True Offline Conversation Workspace
+# ConnectX 0.8.1.3 — Messaging Sync Reliability & Conversation Retention
 
 ConnectX is the user-facing brand for the resilient messaging platform. The validated internal protocol and database identifiers continue to use the FieldMesh name for backward compatibility. The platform is designed around three eventual communication paths:
+
+## 0.8.1.3 reliability hotfix
+
+Mobile/PWA testing exposed a workspace reconciliation race after several messages. 0.8.1.3 coalesces overlapping workspace/conversation syncs, verifies missing conversations with an RLS-protected point read before any local purge, rejects incomplete participant snapshots, consumes the existing message cursor for incremental synchronization, and separates receipt refresh from message-body download. The background full-workspace interval is now 12 seconds instead of 3 seconds.
+
+See `docs/MESSAGING_SYNC_RELIABILITY.md`.
+
 
 1. Internet → Internet
 2. LoRa mesh → LoRa mesh
@@ -34,7 +41,7 @@ Internet available?
 - existing cached messages remain readable while offline
 - outgoing text to an existing cached conversation still enters the 0.8.0 canonical delivery queue
 - remote workspace replacement is committed only after a complete successful metadata fetch
-- conversations removed by an authoritative successful sync are purged from the local workspace/queued data
+- conversations missing from a list snapshot are retained until an RLS point read confirms access loss; only then are local workspace/queued records purged
 - remote-only creation and group-permission controls are disabled while offline
 - developer diagnostics at `/developer/workspace`
 
