@@ -42,6 +42,24 @@ export interface WorkspaceSyncCursorRecord {
   lastSyncedAt: number
 }
 
+export interface WorkspaceConversationPreferenceRecord {
+  localKey: string
+  localUserId: string
+  conversationId: string
+  hiddenAt?: string
+  clearedBefore?: string
+  muted: boolean
+  updatedAt: number
+}
+
+export interface RemoteConversationUserState {
+  conversation_id: string
+  hidden_at: string | null
+  cleared_before: string | null
+  muted: boolean
+  updated_at: string
+}
+
 export interface RemoteWorkspaceConversation {
   id: string
   kind: 'direct' | 'group'
@@ -73,6 +91,25 @@ export function workspaceParticipantKey(
 
 export function workspaceCursorKey(localUserId: string, conversationId: string): string {
   return workspaceConversationKey(localUserId, conversationId)
+}
+
+export function workspacePreferenceKey(localUserId: string, conversationId: string): string {
+  return workspaceConversationKey(localUserId, conversationId)
+}
+
+export function toWorkspaceConversationPreferenceRecord(args: {
+  localUserId: string
+  state: RemoteConversationUserState
+}): WorkspaceConversationPreferenceRecord {
+  return {
+    localKey: workspacePreferenceKey(args.localUserId, args.state.conversation_id),
+    localUserId: args.localUserId,
+    conversationId: args.state.conversation_id,
+    ...(args.state.hidden_at ? { hiddenAt: args.state.hidden_at } : {}),
+    ...(args.state.cleared_before ? { clearedBefore: args.state.cleared_before } : {}),
+    muted: args.state.muted,
+    updatedAt: Date.parse(args.state.updated_at) || Date.now(),
+  }
 }
 
 export function toWorkspaceConversationRecord(args: {

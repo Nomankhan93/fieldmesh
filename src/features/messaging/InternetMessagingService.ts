@@ -6,7 +6,10 @@ import { InternetDeliveryAdapter, MAX_CLOUD_MESSAGE_CHARS } from '../../core/del
 import {
   toWorkspaceConversationRecord,
   toWorkspaceParticipantRecord,
+  toWorkspaceConversationPreferenceRecord,
   workspaceCursorKey,
+  workspacePreferenceKey,
+  type RemoteConversationUserState,
 } from '../../core/workspace/model'
 import {
   SingleFlight,
@@ -97,7 +100,7 @@ export class InternetMessagingService {
   private readonly client: SupabaseClient
   private readonly deliveryCoordinator: DeliveryCoordinator
   private readonly workspaceSync = new SingleFlight<string, InternetConversation[]>()
-  private readonly conversationSync = new SingleFlight<string, void>()
+  private readonly conversationSync = new SingleFlight<string, CloudMessageRecord[]>()
 
   constructor(client: SupabaseClient) {
     this.client = client
@@ -115,6 +118,16 @@ export class InternetMessagingService {
 
     if (error) throw error
     return (data ?? []) as InternetConversation[]
+  }
+
+  async listConversationUserStates(localUserId: string): Promise<RemoteConversationUserState[]> {
+    const { data, error } = await this.client
+      .from('conversation_user_state')
+      .select('conversation_id, hidden_at, cleared_before, muted, updated_at')
+      .eq('user_id', localUserId)
+
+    if (error) throw error
+    return (data ?? []) as RemoteConversationUserState[]
   }
 
   async getParticipants(conversationId: string): Promise<ConversationParticipant[]> {
@@ -142,7 +155,16 @@ export class InternetMessagingService {
     })
 
     try {
-      const listedConversations = await this.listConversations()
+      const [listedConversations, remoteStates] = await Promise.all([
+        this.listConversations(),
+        this.listConversationUserStates(localUserId),
+      ])
+      const hiddenConversationIds = new Set(
+        remoteStates.filter((state) => Boolean(state.hidden_at)).map((state) => state.conversation_id),
+      )
+      const visibleListedConversations = listedConversations.filter(
+        (conversation) => !hiddenConversationIds.has(conversation.id),
+      )
       const existingConversations = await db.workspaceConversations
         .where('localUserId')
         .equals(localUserId)
@@ -152,8 +174,10 @@ export class InternetMessagingService {
       // conversation is missing, point-read it under RLS first. This prevents a transient
       // incomplete snapshot from deleting the local conversation and its queued messages.
       const reconciled = await reconcileConversationSnapshot({
-        existingConversationIds: existingConversations.map((conversation) => conversation.id),
-        listedConversations,
+        existingConversationIds: existingConversations
+          .filter((conversation) => !hiddenConversationIds.has(conversation.id))
+          .map((conversation) => conversation.id),
+        listedConversations: visibleListedConversations,
         lookupMissingConversation: (conversationId) => this.getConversationIfAccessible(conversationId),
       })
       const confirmedRemovedIds = reconciled.confirmedRemovedIds
@@ -185,6 +209,9 @@ export class InternetMessagingService {
           }),
         ),
       )
+      const preferenceRecords = remoteStates.map((state) =>
+        toWorkspaceConversationPreferenceRecord({ localUserId, state }),
+      )
 
       await db.transaction(
         'rw',
@@ -193,6 +220,7 @@ export class InternetMessagingService {
           db.workspaceParticipants,
           db.workspaceSyncState,
           db.workspaceSyncCursors,
+          db.workspaceConversationPreferences,
           db.cloudMessages,
           db.cloudReceipts,
           db.canonicalMessages,
@@ -215,6 +243,13 @@ export class InternetMessagingService {
             if (records.length > 0) await db.workspaceParticipants.bulkPut(records)
           }
 
+          if (preferenceRecords.length > 0) {
+            await db.workspaceConversationPreferences.bulkPut(preferenceRecords)
+          }
+
+          for (const conversationId of hiddenConversationIds) {
+            await this.purgeLocalConversation(localUserId, conversationId)
+          }
           for (const conversationId of confirmedRemovedIds) {
             await this.purgeLocalConversation(localUserId, conversationId)
           }
@@ -268,6 +303,112 @@ export class InternetMessagingService {
     if (error) throw error
     if (!data || typeof data !== 'string') throw new Error('Conversation was not created.')
     return data
+  }
+
+  async hydrateConversation(conversationId: string, localUserId: string): Promise<InternetConversation> {
+    const conversation = await this.getConversationIfAccessible(conversationId)
+    if (!conversation) throw new Error('Conversation is not accessible.')
+    const participants = await this.getParticipants(conversationId)
+    if (!participantSnapshotIncludesUser(participants, localUserId)) {
+      throw new Error('Conversation membership could not be verified.')
+    }
+    const syncedAt = Date.now()
+    await db.transaction('rw', [db.workspaceConversations, db.workspaceParticipants], async () => {
+      await db.workspaceConversations.put(
+        toWorkspaceConversationRecord({ localUserId, conversation, syncedAt }),
+      )
+      await db.workspaceParticipants
+        .where('[localUserId+conversationId]')
+        .equals([localUserId, conversationId])
+        .delete()
+      await db.workspaceParticipants.bulkPut(
+        participants.map((participant) =>
+          toWorkspaceParticipantRecord({ localUserId, conversationId, participant, syncedAt }),
+        ),
+      )
+    })
+    await this.syncConversation(conversationId, localUserId)
+    return conversation
+  }
+
+  async restoreConversationForMe(conversationId: string, localUserId: string): Promise<void> {
+    const { error } = await this.client.rpc('fieldmesh_restore_conversation_for_me', {
+      p_conversation_id: conversationId,
+    })
+    if (error) throw error
+    const existing = await db.workspaceConversationPreferences.get(
+      workspacePreferenceKey(localUserId, conversationId),
+    )
+    await db.workspaceConversationPreferences.put({
+      localKey: workspacePreferenceKey(localUserId, conversationId),
+      localUserId,
+      conversationId,
+      ...(existing?.clearedBefore ? { clearedBefore: existing.clearedBefore } : {}),
+      muted: existing?.muted ?? false,
+      updatedAt: Date.now(),
+    })
+  }
+
+  async clearConversationForMe(conversationId: string, localUserId: string): Promise<void> {
+    const { data, error } = await this.client.rpc('fieldmesh_clear_conversation_for_me', {
+      p_conversation_id: conversationId,
+    })
+    if (error) throw error
+    const clearedBefore = typeof data === 'string' ? data : new Date().toISOString()
+    const existing = await db.workspaceConversationPreferences.get(
+      workspacePreferenceKey(localUserId, conversationId),
+    )
+    await db.workspaceConversationPreferences.put({
+      localKey: workspacePreferenceKey(localUserId, conversationId),
+      localUserId,
+      conversationId,
+      ...(existing?.hiddenAt ? { hiddenAt: existing.hiddenAt } : {}),
+      clearedBefore,
+      muted: existing?.muted ?? false,
+      updatedAt: Date.now(),
+    })
+    await this.clearLocalConversationHistory(localUserId, conversationId)
+  }
+
+  async deleteConversationForMe(conversationId: string, localUserId: string): Promise<void> {
+    const { data, error } = await this.client.rpc('fieldmesh_delete_conversation_for_me', {
+      p_conversation_id: conversationId,
+    })
+    if (error) throw error
+    const at = typeof data === 'string' ? data : new Date().toISOString()
+    const existing = await db.workspaceConversationPreferences.get(
+      workspacePreferenceKey(localUserId, conversationId),
+    )
+    await db.workspaceConversationPreferences.put({
+      localKey: workspacePreferenceKey(localUserId, conversationId),
+      localUserId,
+      conversationId,
+      hiddenAt: at,
+      clearedBefore: at,
+      muted: existing?.muted ?? false,
+      updatedAt: Date.now(),
+    })
+    await this.purgeLocalConversation(localUserId, conversationId)
+  }
+
+  async setConversationMuted(conversationId: string, localUserId: string, muted: boolean): Promise<void> {
+    const { error } = await this.client.rpc('fieldmesh_set_conversation_muted', {
+      p_conversation_id: conversationId,
+      p_muted: muted,
+    })
+    if (error) throw error
+    const existing = await db.workspaceConversationPreferences.get(
+      workspacePreferenceKey(localUserId, conversationId),
+    )
+    await db.workspaceConversationPreferences.put({
+      localKey: workspacePreferenceKey(localUserId, conversationId),
+      localUserId,
+      conversationId,
+      ...(existing?.hiddenAt ? { hiddenAt: existing.hiddenAt } : {}),
+      ...(existing?.clearedBefore ? { clearedBefore: existing.clearedBefore } : {}),
+      muted,
+      updatedAt: Date.now(),
+    })
   }
 
   async createGroup(title: string, memberContacts: string[]): Promise<string> {
@@ -412,13 +553,16 @@ export class InternetMessagingService {
     }
   }
 
-  async syncConversation(conversationId: string, localUserId: string): Promise<void> {
+  async syncConversation(conversationId: string, localUserId: string): Promise<CloudMessageRecord[]> {
     const key = `${localUserId}:${conversationId}`
     return this.conversationSync.run(key, () => this.performConversationSync(conversationId, localUserId))
   }
 
-  private async performConversationSync(conversationId: string, localUserId: string): Promise<void> {
+  private async performConversationSync(conversationId: string, localUserId: string): Promise<CloudMessageRecord[]> {
     const cursor = await db.workspaceSyncCursors.get(workspaceCursorKey(localUserId, conversationId))
+    const preference = await db.workspaceConversationPreferences.get(
+      workspacePreferenceKey(localUserId, conversationId),
+    )
     const nowIso = new Date().toISOString()
     let query = this.client
       .from('messages')
@@ -426,7 +570,11 @@ export class InternetMessagingService {
       .eq('conversation_id', conversationId)
       .gt('expires_at', nowIso)
 
-    if (cursor?.lastServerCreatedAt) {
+    const clearedAt = preference?.clearedBefore ? Date.parse(preference.clearedBefore) : 0
+    const cursorAt = cursor?.lastServerCreatedAt ? Date.parse(cursor.lastServerCreatedAt) : 0
+    if (clearedAt > cursorAt && preference?.clearedBefore) {
+      query = query.gt('created_at', preference.clearedBefore)
+    } else if (cursor?.lastServerCreatedAt) {
       // Include the cursor timestamp again, then apply the compound timestamp/message-id
       // cursor locally so messages sharing the same server timestamp cannot be skipped.
       query = query.gte('created_at', cursor.lastServerCreatedAt)
@@ -438,14 +586,18 @@ export class InternetMessagingService {
 
     if (error) throw error
     const fetchedRows = (data ?? []) as CloudMessageRow[]
-    const rows = rowsAfterCursor(fetchedRows, cursor)
+    const effectiveCursor = clearedAt > cursorAt ? undefined : cursor
+    const rows = rowsAfterCursor(fetchedRows, effectiveCursor).filter(
+      (row) => !preference?.clearedBefore || Date.parse(row.created_at) > Date.parse(preference.clearedBefore),
+    )
+    const newIncoming: CloudMessageRecord[] = []
 
     for (const row of rows) {
       const existing = await db.cloudMessages.get(localMessageKey(localUserId, row.id))
       const createdAt = Date.parse(row.client_created_at)
       const expiresAt = Date.parse(row.expires_at)
       const state: CloudMessageState = existing?.state ?? (row.sender_id === localUserId ? 'submitted' : 'delivered')
-      await db.cloudMessages.put({
+      const localRecord: CloudMessageRecord = {
         localKey: localMessageKey(localUserId, row.id),
         localUserId,
         id: row.id,
@@ -457,7 +609,9 @@ export class InternetMessagingService {
         serverCreatedAt: Date.parse(row.created_at),
         expiresAt,
         updatedAt: Date.now(),
-      })
+      }
+      await db.cloudMessages.put(localRecord)
+      if (!existing && row.sender_id !== localUserId) newIncoming.push(localRecord)
       await this.deliveryCoordinator.observe({
         localUserId,
         message: createTextMessage({
@@ -494,6 +648,7 @@ export class InternetMessagingService {
           : {}),
       lastSyncedAt: Date.now(),
     })
+    return newIncoming
   }
 
   private async syncReceiptsForConversation(
@@ -541,11 +696,13 @@ export class InternetMessagingService {
     await this.refreshDerivedStates(localUserId, messageIds)
   }
 
-  async syncAll(conversationIds: string[], localUserId: string): Promise<void> {
+  async syncAll(conversationIds: string[], localUserId: string): Promise<CloudMessageRecord[]> {
     await this.retryOutbox(localUserId)
+    const incoming: CloudMessageRecord[] = []
     for (const conversationId of conversationIds) {
-      await this.syncConversation(conversationId, localUserId)
+      incoming.push(...await this.syncConversation(conversationId, localUserId))
     }
+    return incoming
   }
 
   async markConversationRead(conversationId: string, localUserId: string): Promise<void> {
@@ -562,6 +719,44 @@ export class InternetMessagingService {
     }
 
     await this.syncReceiptsForConversation(conversationId, localUserId)
+  }
+
+  private async clearLocalConversationHistory(localUserId: string, conversationId: string): Promise<void> {
+    const [cloudMessages, canonicalMessages] = await Promise.all([
+      db.cloudMessages
+        .where('[localUserId+conversationId]')
+        .equals([localUserId, conversationId])
+        .toArray(),
+      db.canonicalMessages
+        .where('[localUserId+conversationId]')
+        .equals([localUserId, conversationId])
+        .toArray(),
+    ])
+    const messageIds = new Set([
+      ...cloudMessages.map((message) => message.id),
+      ...canonicalMessages.map((message) => message.messageId),
+    ])
+    if (cloudMessages.length > 0) await db.cloudMessages.bulkDelete(cloudMessages.map((message) => message.localKey))
+    if (canonicalMessages.length > 0) {
+      const localKeys = canonicalMessages.map((message) => message.localKey)
+      await db.canonicalMessages.bulkDelete(localKeys)
+      await db.deliveryQueue.bulkDelete(localKeys)
+    }
+    if (messageIds.size > 0) {
+      const receipts = await db.cloudReceipts
+        .where('localUserId')
+        .equals(localUserId)
+        .filter((receipt) => messageIds.has(receipt.messageId))
+        .toArray()
+      if (receipts.length > 0) await db.cloudReceipts.bulkDelete(receipts.map((receipt) => receipt.localKey))
+      const attempts = await db.deliveryPathAttempts
+        .where('localUserId')
+        .equals(localUserId)
+        .filter((attempt) => messageIds.has(attempt.messageId))
+        .toArray()
+      if (attempts.length > 0) await db.deliveryPathAttempts.bulkDelete(attempts.map((attempt) => attempt.id))
+    }
+    await db.workspaceSyncCursors.delete(workspaceCursorKey(localUserId, conversationId))
   }
 
   private async purgeLocalConversation(localUserId: string, conversationId: string): Promise<void> {

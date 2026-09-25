@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react'
+import { useLiveQuery } from 'dexie-react-hooks'
 import { Link, Outlet, useNavigate, useRouterState } from '@tanstack/react-router'
 import { APP_BRAND } from '../../config/brand'
 import { useAuth } from '../auth/AuthProvider'
 import { NavIcon } from './NavIcon'
 import { PwaStatusCenter } from '../pwa/PwaStatusCenter'
 import { usePwa } from '../pwa/PwaProvider'
+import { db } from '../../offline/db'
+import { IncomingSyncAgent } from '../notifications/IncomingSyncAgent'
 import {
   DEVELOPER_NAV_ITEMS,
   MOBILE_NAV_ITEMS,
@@ -27,11 +30,13 @@ function NavLink({
   pathname,
   compact = false,
   collapsed = false,
+  badgeCount = 0,
 }: {
   item: FieldMeshNavItem
   pathname: string
   compact?: boolean
   collapsed?: boolean
+  badgeCount?: number
 }) {
   const active = isNavItemActive(pathname, item.to)
   const danger = item.to === '/sos'
@@ -45,6 +50,7 @@ function NavLink({
       >
         <span className={`relative flex h-8 w-12 items-center justify-center rounded-full transition ${active ? (danger ? 'bg-rose-100' : 'bg-blue-100') : ''}`}>
           <NavIcon name={item.icon} className="h-5 w-5" />
+          {badgeCount > 0 ? <span className="absolute -right-1 -top-1 flex min-h-4 min-w-4 items-center justify-center rounded-full bg-blue-600 px-1 text-[9px] font-black text-white">{badgeCount > 99 ? '99+' : badgeCount}</span> : null}
           {active ? <span className={`absolute -bottom-1 h-1 w-1 rounded-full ${danger ? 'bg-rose-600' : 'bg-blue-600'}`} /> : null}
         </span>
         <span className="mt-1 max-w-full truncate">{item.label}</span>
@@ -59,7 +65,10 @@ function NavLink({
       aria-label={collapsed ? item.label : undefined}
       className={`flex items-center rounded-xl ${collapsed ? 'justify-center px-2 py-3' : 'gap-3 px-3 py-2.5'} ${active ? (danger ? 'bg-rose-700 text-white' : 'bg-gradient-to-r from-cyan-500 via-blue-600 to-violet-700 text-white shadow-sm') : danger ? 'text-rose-700 hover:bg-rose-50' : 'text-slate-700 hover:bg-blue-50'}`}
     >
-      <NavIcon name={item.icon} className="h-5 w-5 shrink-0" />
+      <span className="relative shrink-0">
+        <NavIcon name={item.icon} className="h-5 w-5" />
+        {badgeCount > 0 ? <span className="absolute -right-2 -top-2 flex min-h-4 min-w-4 items-center justify-center rounded-full bg-blue-600 px-1 text-[9px] font-black text-white">{badgeCount > 99 ? '99+' : badgeCount}</span> : null}
+      </span>
       {!collapsed ? (
         <span className="min-w-0">
           <span className="block text-sm font-semibold">{item.label}</span>
@@ -94,6 +103,20 @@ export function AppShell() {
   const developer = isDeveloperPath(pathname)
   const [developerMode, setDeveloperMode] = useState(readDeveloperMode)
   const [collapsed, setCollapsed] = useState(readSidebarCollapsed)
+  const localUserId = session?.user.id ?? ''
+  const unreadCount = useLiveQuery(async () => {
+    if (!localUserId) return 0
+    const [messages, receipts] = await Promise.all([
+      db.cloudMessages.where('localUserId').equals(localUserId).toArray(),
+      db.cloudReceipts.where('localUserId').equals(localUserId).toArray(),
+    ])
+    const readIds = new Set(
+      receipts
+        .filter((receipt) => receipt.userId === localUserId && receipt.receiptType === 'read')
+        .map((receipt) => receipt.messageId),
+    )
+    return messages.filter((message) => message.senderId !== localUserId && !readIds.has(message.id)).length
+  }, [localUserId], 0)
 
   useEffect(() => subscribeDeveloperMode(setDeveloperMode), [])
 
@@ -152,6 +175,7 @@ export function AppShell() {
   return (
     <div className="min-h-screen bg-[#f7f9ff] text-slate-950">
       <PwaStatusCenter />
+      <IncomingSyncAgent />
       <header className="sticky top-0 z-40 border-b border-blue-100/80 bg-white/92 backdrop-blur-xl lg:hidden" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
         <div className="flex min-h-14 items-center justify-between gap-3 px-4 py-2">
           <Link to={developer && developerMode ? '/developer' : '/'} aria-label="ConnectX home" className="flex min-w-0 items-center gap-2.5">
@@ -181,7 +205,7 @@ export function AppShell() {
           </div>
 
           <nav className="flex-1 space-y-1 p-3">
-            {navItems.map((item) => <NavLink key={item.to} item={item} pathname={pathname} collapsed={collapsed} />)}
+            {navItems.map((item) => <NavLink key={item.to} item={item} pathname={pathname} collapsed={collapsed} badgeCount={item.to === '/messages' ? unreadCount : 0} />)}
           </nav>
 
           <div className="border-t border-inherit p-3">
@@ -222,7 +246,7 @@ export function AppShell() {
           aria-label="Primary navigation"
         >
           <div className="mx-auto flex min-h-[4.15rem] max-w-lg gap-0.5">
-            {MOBILE_NAV_ITEMS.map((item) => <NavLink key={item.to} item={item} pathname={pathname} compact />)}
+            {MOBILE_NAV_ITEMS.map((item) => <NavLink key={item.to} item={item} pathname={pathname} compact badgeCount={item.to === '/messages' ? unreadCount : 0} />)}
           </div>
         </nav>
       ) : null}

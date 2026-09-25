@@ -7,6 +7,7 @@ import { db, type CloudMessageRecord } from '../../offline/db'
 import { AuthPanel } from '../auth/AuthPanel'
 import { useAuth } from '../auth/AuthProvider'
 import { MessengerAvatar } from '../messaging/MessengerAvatar'
+import { queuePendingConversationId } from '../notifications/IncomingSyncAgent'
 import { describeConnection } from '../network/networkStatus'
 
 function formatTime(value: number | undefined) {
@@ -154,7 +155,7 @@ function RecentChats({ localUserId }: { localUserId: string }) {
       ) : (
         <div className="divide-y divide-slate-100">
           {recent.map(({ conversation, title, latest }) => (
-            <Link key={conversation.id} to="/messages" className="flex items-center gap-3 px-4 py-3 hover:bg-slate-50">
+            <Link key={conversation.id} to="/messages" onClick={() => queuePendingConversationId(conversation.id)} className="flex items-center gap-3 px-4 py-3 hover:bg-slate-50">
               <MessengerAvatar label={title} group={conversation.kind === 'group'} size="sm" />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-bold text-slate-900">{title}</p>

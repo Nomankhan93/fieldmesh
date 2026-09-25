@@ -8,7 +8,6 @@ import {
 } from '../../core/workspace/model'
 import { BACKGROUND_WORKSPACE_SYNC_INTERVAL_MS } from '../../core/workspace/syncPolicy'
 import { useAuth } from '../auth/AuthProvider'
-import { supabase } from '../../lib/supabase'
 import { db, type CloudMessageRecord, type CloudReceiptRecord } from '../../offline/db'
 import { GroupManagementPanel } from './GroupManagementPanel'
 import { MobileSheet } from '../mobile/MobileSheet'
@@ -19,11 +18,9 @@ import {
   messageDayLabel,
   messageStatusPresentation,
 } from './messengerUi'
-import {
-  InternetMessagingService,
-  type ConversationParticipant,
-  type InternetConversation,
-} from './InternetMessagingService'
+import type { ConversationParticipant, InternetConversation } from './InternetMessagingService'
+import { getInternetMessagingService } from './runtime'
+import { consumePendingConversationId } from '../notifications/IncomingSyncAgent'
 
 function formatTime(value: number | undefined) {
   if (!value) return ''
@@ -51,11 +48,15 @@ export function MessagingPage() {
   const [text, setText] = useState('')
   const [conversationSearch, setConversationSearch] = useState('')
   const [notice, setNotice] = useState('Chats ready.')
+  const [composerError, setComposerError] = useState<string | null>(null)
+  const [conversationMenuOpen, setConversationMenuOpen] = useState(false)
+  const [conversationAction, setConversationAction] = useState<'clear' | 'delete' | null>(null)
+  const [pendingOpenConversationId, setPendingOpenConversationId] = useState<string | null>(() => consumePendingConversationId())
   const [busy, setBusy] = useState(false)
   const [browserOnline, setBrowserOnline] = useState(() => navigator.onLine)
   const messageViewportRef = useRef<HTMLDivElement | null>(null)
 
-  const service = useMemo(() => (supabase ? new InternetMessagingService(supabase) : null), [])
+  const service = useMemo(() => getInternetMessagingService(), [])
   const localUserId = session?.user.id ?? ''
 
   const cachedConversations = useLiveQuery(
@@ -121,6 +122,14 @@ export function MessagingPage() {
     [localUserId],
     [],
   )
+  const conversationPreferences = useLiveQuery(
+    async () => localUserId
+      ? db.workspaceConversationPreferences.where('localUserId').equals(localUserId).toArray()
+      : [],
+    [localUserId],
+    [],
+  )
+
   const queuedCount = useLiveQuery(
     () => localUserId ? db.deliveryQueue.where('localUserId').equals(localUserId).count() : Promise.resolve(0),
     [localUserId],
@@ -188,6 +197,13 @@ export function MessagingPage() {
   }, [conversations])
 
   useEffect(() => {
+    if (!pendingOpenConversationId) return
+    if (!conversations.some((conversation) => conversation.id === pendingOpenConversationId)) return
+    setSelectedConversationId(pendingOpenConversationId)
+    setPendingOpenConversationId(null)
+  }, [conversations, pendingOpenConversationId])
+
+  useEffect(() => {
     setShowGroupManager(false)
     if (!browserOnline || !service || !localUserId || !selectedConversationId) return
     void service.markConversationRead(selectedConversationId, localUserId).catch((error) => {
@@ -211,6 +227,9 @@ export function MessagingPage() {
   const messagingService = service
   const selectedConversation = conversations.find((item) => item.id === selectedConversationId)
   const selectedParticipants = selectedConversationId ? (participants[selectedConversationId] ?? []) : []
+  const selectedPreference = selectedConversationId
+    ? conversationPreferences.find((preference) => preference.conversationId === selectedConversationId)
+    : undefined
   const selectedMessages = messages.filter((message) => message.conversationId === selectedConversationId).sort((a, b) => a.createdAt - b.createdAt)
   const filteredConversations = conversations.filter((conversation) => {
     const query = conversationSearch.trim().toLocaleLowerCase()
@@ -249,6 +268,7 @@ export function MessagingPage() {
   async function pasteContact() {
     try {
       setRecipientId(normalizeContactInput(await navigator.clipboard.readText()))
+      setComposerError(null)
       setNotice('Contact pasted. Review the code, then start the chat.')
     } catch {
       setNotice('Clipboard read access is unavailable. Paste the ConnectX code manually.')
@@ -257,26 +277,35 @@ export function MessagingPage() {
 
   async function createDirectConversation(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    setComposerError(null)
     if (!browserOnline) {
-      setNotice('Starting a new conversation requires Internet once. Existing cached chats remain available offline.')
+      const message = 'Starting a new conversation requires Internet once. Existing cached chats remain available offline.'
+      setComposerError(message)
+      setNotice(message)
       return
     }
     const contact = normalizeContactInput(recipientId)
     if (!isValidContactInput(contact)) {
-      setNotice('Enter a valid ConnectX code such as FM-12AB34CD56EF, a shared contact link, or a technical identity ID.')
+      const message = 'Enter a valid ConnectX code such as FM-12AB34CD56EF, a shared contact link, or a technical identity ID.'
+      setComposerError(message)
+      setNotice(message)
       return
     }
     setBusy(true)
     try {
       const conversationId = await messagingService.createDirectConversation(contact)
+      await messagingService.restoreConversationForMe(conversationId, localUserId)
+      await messagingService.hydrateConversation(conversationId, localUserId)
       setRecipientId('')
-      await refresh()
       setSelectedConversationId(conversationId)
       setMobileComposerOpen(false)
       setDesktopComposerOpen(false)
       setNotice('Chat ready.')
+      void refresh().catch(() => undefined)
     } catch (error) {
-      setNotice(error instanceof Error ? error.message : 'Unable to create conversation.')
+      const message = error instanceof Error ? error.message : 'Unable to create conversation.'
+      setComposerError(message)
+      setNotice(message)
     } finally {
       setBusy(false)
     }
@@ -301,15 +330,61 @@ export function MessagingPage() {
     setBusy(true)
     try {
       const conversationId = await messagingService.createGroup(groupTitle, contacts)
+      await messagingService.hydrateConversation(conversationId, localUserId)
       setGroupTitle('')
       setGroupMembers('')
-      await refresh()
       setSelectedConversationId(conversationId)
       setMobileComposerOpen(false)
       setDesktopComposerOpen(false)
       setNotice('Group created.')
+      void refresh().catch(() => undefined)
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'Unable to create group.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function clearSelectedConversation() {
+    if (!selectedConversationId) return
+    setBusy(true)
+    try {
+      await messagingService.clearConversationForMe(selectedConversationId, localUserId)
+      setConversationAction(null)
+      setConversationMenuOpen(false)
+      setNotice('Chat history cleared for your account.')
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Unable to clear chat.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function deleteSelectedConversation() {
+    if (!selectedConversationId) return
+    setBusy(true)
+    try {
+      await messagingService.deleteConversationForMe(selectedConversationId, localUserId)
+      setSelectedConversationId(null)
+      setConversationAction(null)
+      setConversationMenuOpen(false)
+      setNotice('Chat deleted for you. A new incoming message can make it appear again.')
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Unable to delete chat.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function toggleSelectedMute() {
+    if (!selectedConversationId) return
+    setBusy(true)
+    try {
+      const next = !(selectedPreference?.muted ?? false)
+      await messagingService.setConversationMuted(selectedConversationId, localUserId, next)
+      setNotice(next ? 'Notifications muted for this chat.' : 'Notifications enabled for this chat.')
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Unable to update notification preference.')
     } finally {
       setBusy(false)
     }
@@ -404,7 +479,8 @@ export function MessagingPage() {
                     <button type="button" onClick={() => setShowQrFoundation((current) => !current)} className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700">Scan QR</button>
                   </div>
                   {showQrFoundation ? <p className="rounded-xl bg-white p-2.5 text-[11px] leading-5 text-slate-500">Camera scanning is not connected yet. Shared links and FM compatibility codes are supported.</p> : null}
-                  <button className="w-full rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-bold text-white disabled:opacity-40" disabled={busy || !browserOnline}>Start chat</button>
+                  {composerError ? <p className="rounded-xl border border-rose-200 bg-rose-50 p-2.5 text-xs leading-5 text-rose-800">{composerError}</p> : null}
+                  <button className="w-full rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-bold text-white disabled:opacity-40" disabled={busy || !browserOnline}>{busy ? 'Starting…' : 'Start chat'}</button>
                 </form>
               ) : (
                 <form className="mt-3 space-y-2" onSubmit={createGroup}>
@@ -473,6 +549,7 @@ export function MessagingPage() {
                 </div>
                 <div className="flex shrink-0 items-center gap-1">
                   {selectedConversation.kind === 'group' ? <button type="button" onClick={() => setShowGroupManager((current) => !current)} className={`connectx-touch flex h-10 items-center rounded-full px-3 text-xs font-bold ${showGroupManager ? 'bg-blue-100 text-blue-800' : 'text-slate-600 hover:bg-slate-100'}`}>{showGroupManager ? 'Done' : 'Group info'}</button> : null}
+                  <button type="button" onClick={() => { setConversationAction(null); setConversationMenuOpen(true) }} className="connectx-touch flex h-10 w-10 items-center justify-center rounded-full text-xl text-slate-600 hover:bg-slate-100" aria-label="Chat options">⋮</button>
                   <span className={`ml-1 h-2.5 w-2.5 rounded-full ${browserOnline ? 'bg-emerald-500' : 'bg-amber-500'}`} title={browserOnline ? 'Internet available' : 'Offline'} />
                 </div>
               </div>
@@ -534,7 +611,7 @@ export function MessagingPage() {
         open={mobileComposerOpen}
         title={composerMode === 'direct' ? 'New conversation' : 'New group'}
         description={browserOnline ? 'Start a new ConnectX conversation.' : 'Creating new conversations requires Internet once.'}
-        onClose={() => setMobileComposerOpen(false)}
+        onClose={() => { setMobileComposerOpen(false); setComposerError(null) }}
       >
         <div className="grid grid-cols-2 rounded-xl bg-slate-100 p-1 text-xs font-bold">
           <button type="button" onClick={() => setComposerMode('direct')} className={`connectx-touch rounded-lg px-3 py-2 ${composerMode === 'direct' ? 'bg-white shadow-sm' : 'text-slate-500'}`}>New chat</button>
@@ -549,7 +626,8 @@ export function MessagingPage() {
               <button type="button" onClick={() => setShowQrFoundation((current) => !current)} className="connectx-touch rounded-xl border border-slate-300 bg-white px-3 text-sm font-bold text-slate-700">Scan QR</button>
             </div>
             {showQrFoundation ? <p className="rounded-xl bg-slate-50 p-3 text-xs leading-5 text-slate-500">Camera scanning is not connected yet. Shared contact links and FM compatibility codes are already supported.</p> : null}
-            <button className="connectx-touch w-full rounded-xl bg-gradient-to-r from-cyan-500 via-blue-600 to-violet-700 px-4 text-sm font-bold text-white disabled:opacity-40" disabled={busy || !browserOnline}>Start chat</button>
+            {composerError ? <p className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs leading-5 text-rose-800">{composerError}</p> : null}
+            <button className="connectx-touch w-full rounded-xl bg-gradient-to-r from-cyan-500 via-blue-600 to-violet-700 px-4 text-sm font-bold text-white disabled:opacity-40" disabled={busy || !browserOnline}>{busy ? 'Starting…' : 'Start chat'}</button>
           </form>
         ) : (
           <form className="mt-4 space-y-3" onSubmit={createGroup}>
@@ -557,6 +635,26 @@ export function MessagingPage() {
             <textarea className="connectx-input min-h-28 w-full rounded-xl border border-slate-300 p-3 text-base uppercase placeholder:normal-case" placeholder={'Member codes, one per line\nFM-12AB34CD56EF'} value={groupMembers} onChange={(event) => setGroupMembers(event.target.value)} />
             <button className="connectx-touch w-full rounded-xl bg-gradient-to-r from-cyan-500 via-blue-600 to-violet-700 px-4 text-sm font-bold text-white disabled:opacity-40" disabled={busy || !browserOnline || !groupTitle.trim()}>Create group</button>
           </form>
+        )}
+      </MobileSheet>
+
+      <MobileSheet
+        open={conversationMenuOpen && Boolean(selectedConversationId)}
+        title={conversationAction ? (conversationAction === 'delete' ? 'Delete chat?' : 'Clear chat?') : 'Chat options'}
+        description={conversationAction === 'delete' ? 'This removes the chat and its local history for you. The other person is not affected, and a new incoming message can make the chat appear again.' : conversationAction === 'clear' ? 'This clears message history for your account while keeping the conversation available.' : conversationLabel(selectedConversation)}
+        onClose={() => { setConversationMenuOpen(false); setConversationAction(null) }}
+      >
+        {conversationAction ? (
+          <div className="space-y-3">
+            <button type="button" disabled={busy} onClick={() => void (conversationAction === 'delete' ? deleteSelectedConversation() : clearSelectedConversation())} className={`connectx-touch w-full rounded-xl px-4 text-sm font-bold text-white disabled:opacity-50 ${conversationAction === 'delete' ? 'bg-rose-700' : 'bg-slate-950'}`}>{busy ? 'Working…' : conversationAction === 'delete' ? 'Delete chat for me' : 'Clear history'}</button>
+            <button type="button" onClick={() => setConversationAction(null)} className="connectx-touch w-full rounded-xl border border-slate-300 bg-white px-4 text-sm font-bold text-slate-700">Cancel</button>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <button type="button" disabled={busy || !browserOnline} onClick={() => void toggleSelectedMute()} className="connectx-touch flex w-full items-center justify-between rounded-xl border border-slate-200 bg-white px-4 text-left text-sm font-bold text-slate-800 disabled:opacity-50"><span>{selectedPreference?.muted ? 'Unmute notifications' : 'Mute notifications'}</span><span className="text-slate-400">›</span></button>
+            <button type="button" disabled={busy || !browserOnline} onClick={() => setConversationAction('clear')} className="connectx-touch flex w-full items-center justify-between rounded-xl border border-slate-200 bg-white px-4 text-left text-sm font-bold text-slate-800 disabled:opacity-50"><span>Clear chat</span><span className="text-slate-400">›</span></button>
+            <button type="button" disabled={busy || !browserOnline} onClick={() => setConversationAction('delete')} className="connectx-touch flex w-full items-center justify-between rounded-xl border border-rose-200 bg-rose-50 px-4 text-left text-sm font-bold text-rose-700 disabled:opacity-50"><span>Delete chat for me</span><span>›</span></button>
+          </div>
         )}
       </MobileSheet>
 

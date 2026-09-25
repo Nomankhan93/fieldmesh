@@ -1,4 +1,10 @@
-# ConnectX 0.8.1.5 — Mobile UX Consolidation & Information Hierarchy
+# ConnectX 0.8.1.6 — Incoming Sync, Notifications & Conversation Management
+
+0.8.1.6 makes incoming messaging app-wide instead of Chats-page-only. Signed-in users can discover new direct conversations and messages while on Home/Network/Profile, delivered receipts are created during incoming sync, unread badges update globally, notification permission/system alerts are available, direct chats open immediately after contact-code resolution, and per-user Clear/Delete/Mute chat state is persisted without affecting the other participant.
+
+See `docs/INCOMING_SYNC_NOTIFICATIONS_CONVERSATION_MANAGEMENT.md`.
+
+## ConnectX 0.8.1.5 — Mobile UX Consolidation & Information Hierarchy
 
 0.8.1.5 consolidates the mobile product experience without changing messaging, delivery, offline workspace, Supabase authorization, crypto, mesh or gateway logic. Internal screens use a compact app header, Home becomes a connection-first dashboard with compact quick actions and recent chats, Auth moves the form above the fold on phones, Network becomes a condensed status list, Profile separates account/ConnectX ID/devices/app status, and SOS prioritizes the emergency action with a compact prototype warning and simplified location controls.
 

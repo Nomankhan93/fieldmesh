@@ -31,6 +31,9 @@ type PwaContextValue = {
   installOutcome: InstallOutcome
   storagePersisted: boolean | null
   registrationError: string | null
+  notificationSupported: boolean
+  notificationPermission: NotificationPermission | 'unsupported'
+  requestNotifications: () => Promise<NotificationPermission | 'unsupported'>
   install: () => Promise<InstallOutcome>
   applyUpdate: () => Promise<void>
   checkForUpdate: () => Promise<void>
@@ -65,12 +68,16 @@ export function PwaProvider({ children }: PropsWithChildren) {
   const [installOutcome, setInstallOutcome] = useState<InstallOutcome>(null)
   const [storagePersisted, setStoragePersisted] = useState<boolean | null>(null)
   const [registrationError, setRegistrationError] = useState<string | null>(null)
+  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission | 'unsupported'>(() =>
+    typeof Notification === 'undefined' ? 'unsupported' : Notification.permission,
+  )
   const registrationRef = useRef<ServiceWorkerRegistration | null>(null)
   const updateRef = useRef<((reloadPage?: boolean) => Promise<void>) | null>(null)
   const registrationStartedRef = useRef(false)
 
   const serviceWorkerSupported = typeof navigator !== 'undefined' && 'serviceWorker' in navigator
   const secureContext = typeof window === 'undefined' ? true : window.isSecureContext
+  const notificationSupported = typeof Notification !== 'undefined' && serviceWorkerSupported
   const installPlatform = useMemo(detectPlatform, [])
 
   useEffect(() => {
@@ -169,6 +176,21 @@ export function PwaProvider({ children }: PropsWithChildren) {
     return () => window.clearInterval(interval)
   }, [serviceWorkerSupported])
 
+  const requestNotifications = useCallback(async (): Promise<NotificationPermission | 'unsupported'> => {
+    if (!notificationSupported) {
+      setNotificationPermission('unsupported')
+      return 'unsupported'
+    }
+    try {
+      const permission = await Notification.requestPermission()
+      setNotificationPermission(permission)
+      return permission
+    } catch {
+      setNotificationPermission(Notification.permission)
+      return Notification.permission
+    }
+  }, [notificationSupported])
+
   const install = useCallback(async (): Promise<InstallOutcome> => {
     if (!installPrompt) return null
     try {
@@ -213,6 +235,9 @@ export function PwaProvider({ children }: PropsWithChildren) {
     installOutcome,
     storagePersisted,
     registrationError,
+    notificationSupported,
+    notificationPermission,
+    requestNotifications,
     install,
     applyUpdate,
     checkForUpdate,
@@ -228,6 +253,9 @@ export function PwaProvider({ children }: PropsWithChildren) {
     installOutcome,
     storagePersisted,
     registrationError,
+    notificationSupported,
+    notificationPermission,
+    requestNotifications,
     install,
     applyUpdate,
     checkForUpdate,

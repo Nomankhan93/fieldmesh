@@ -14,6 +14,7 @@ import type {
   WorkspaceParticipantRecord,
   WorkspaceSyncCursorRecord,
   WorkspaceSyncStateRecord,
+  WorkspaceConversationPreferenceRecord,
 } from '../core/workspace/model'
 
 export interface OutboxRecord {
@@ -106,6 +107,7 @@ class FieldMeshDatabase extends Dexie {
   workspaceParticipants!: EntityTable<WorkspaceParticipantRecord, 'localKey'>
   workspaceSyncState!: EntityTable<WorkspaceSyncStateRecord, 'localUserId'>
   workspaceSyncCursors!: EntityTable<WorkspaceSyncCursorRecord, 'localKey'>
+  workspaceConversationPreferences!: EntityTable<WorkspaceConversationPreferenceRecord, 'localKey'>
 
   constructor() {
     super('fieldmesh-v01')
@@ -259,6 +261,31 @@ class FieldMeshDatabase extends Dexie {
       workspaceParticipants: 'localKey, localUserId, [localUserId+conversationId], user_id, role, lastSyncedAt',
       workspaceSyncState: 'localUserId, status, lastAttemptAt, lastSuccessfulSyncAt',
       workspaceSyncCursors: 'localKey, localUserId, conversationId, lastSyncedAt',
+    })
+    this.version(7).stores({
+      messages: 'id, conversationId, senderId, recipientId, state, createdAt, updatedAt',
+      outbox: 'messageId, nextAttemptAt, expiresAt, retryCount',
+      seenPackets: 'packetId, receivedAt',
+      deliveryAttempts: 'id, messageId, transport, status, startedAt',
+      cloudMessages: 'localKey, localUserId, id, [localUserId+conversationId], senderId, state, createdAt, expiresAt, updatedAt',
+      cloudOutbox: 'localKey, localUserId, messageId, nextAttemptAt, expiresAt, retryCount',
+      cloudReceipts: 'localKey, localUserId, receiptKey, messageId, userId, receiptType, createdAt',
+      cloudDeliveryAttempts: 'id, localUserId, messageId, status, startedAt',
+      gatewayQueue: 'key, gatewayId, direction, messageId, nextAttemptAt, expiresAt',
+      gatewaySeen: 'key, gatewayId, direction, messageId, seenAt',
+      gatewayRoutes: 'key, userId, gatewayId, radioNodeId, lastSeenAt, expiresAt',
+      locationFixes: 'id, capturedAt, source',
+      locationShares: 'id, status, path, createdAt, updatedAt',
+      sosRecords: 'id, status, category, path, createdAt, updatedAt',
+      sosEvents: 'id, sosId, at, type',
+      canonicalMessages: 'localKey, localUserId, messageId, [localUserId+conversationId], senderUserId, type, priority, state, createdAt, expiresAt, updatedAt',
+      deliveryQueue: 'localKey, localUserId, messageId, priorityRank, nextAttemptAt, expiresAt, retryCount',
+      deliveryPathAttempts: 'id, localUserId, messageId, path, status, startedAt',
+      workspaceConversations: 'localKey, localUserId, id, [localUserId+updatedAtMs], kind, lastSyncedAt',
+      workspaceParticipants: 'localKey, localUserId, [localUserId+conversationId], user_id, role, lastSyncedAt',
+      workspaceSyncState: 'localUserId, status, lastAttemptAt, lastSuccessfulSyncAt',
+      workspaceSyncCursors: 'localKey, localUserId, conversationId, lastSyncedAt',
+      workspaceConversationPreferences: 'localKey, localUserId, conversationId, muted, updatedAt',
     })
   }
 }
