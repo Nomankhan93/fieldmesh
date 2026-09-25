@@ -15,6 +15,7 @@ export function DeveloperHomePage() {
         <ToolCard title="Security foundation" description="Inspect the 0.7 crypto envelope, key-epoch and device-public-key foundation without claiming production E2E encryption." to="/developer/security" />
         <ToolCard title="Delivery coordinator" description="Inspect canonical logical messages, durable delivery queue state and per-path attempts introduced in 0.8.0." to="/developer/delivery" />
         <ToolCard title="Offline workspace" description="Inspect cached conversations, participants, queued messages and per-conversation sync cursors introduced in 0.8.1." to="/developer/workspace" />
+        <ToolCard title="Mobile preview" description="Preview the normal ConnectX app at realistic phone and tablet viewport sizes without exposing diagnostics to users." to="/developer/mobile-preview" />
       </section>
 
       <section className="mt-5 rounded-2xl border border-slate-200 bg-white p-5">
@@ -25,7 +26,7 @@ export function DeveloperHomePage() {
   )
 }
 
-function ToolCard({ title, description, to }: { title: string; description: string; to: '/developer/mesh' | '/developer/gateway' | '/developer/security' | '/developer/delivery' | '/developer/workspace' }) {
+function ToolCard({ title, description, to }: { title: string; description: string; to: '/developer/mesh' | '/developer/gateway' | '/developer/security' | '/developer/delivery' | '/developer/workspace' | '/developer/mobile-preview' }) {
   return (
     <Link to={to} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
       <h2 className="text-xl font-black">{title}</h2>

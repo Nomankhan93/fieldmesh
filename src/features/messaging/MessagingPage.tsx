@@ -10,6 +10,7 @@ import { useAuth } from '../auth/AuthProvider'
 import { supabase } from '../../lib/supabase'
 import { db, type CloudMessageRecord, type CloudReceiptRecord } from '../../offline/db'
 import { GroupManagementPanel } from './GroupManagementPanel'
+import { MobileSheet } from '../mobile/MobileSheet'
 import {
   InternetMessagingService,
   type ConversationParticipant,
@@ -37,6 +38,7 @@ export function MessagingPage() {
   const [groupMembers, setGroupMembers] = useState('')
   const [showQrFoundation, setShowQrFoundation] = useState(false)
   const [showGroupManager, setShowGroupManager] = useState(false)
+  const [mobileComposerOpen, setMobileComposerOpen] = useState(false)
   const [text, setText] = useState('')
   const [notice, setNotice] = useState('Chats ready.')
   const [busy, setBusy] = useState(false)
@@ -243,6 +245,7 @@ export function MessagingPage() {
       setRecipientId('')
       await refresh()
       setSelectedConversationId(conversationId)
+      setMobileComposerOpen(false)
       setNotice('Chat ready.')
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'Unable to create conversation.')
@@ -274,6 +277,7 @@ export function MessagingPage() {
       setGroupMembers('')
       await refresh()
       setSelectedConversationId(conversationId)
+      setMobileComposerOpen(false)
       setNotice('Group created.')
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'Unable to create group.')
@@ -302,11 +306,11 @@ export function MessagingPage() {
   }
 
   return (
-    <main className="mx-auto max-w-7xl p-4 sm:p-6 lg:p-8">
-      <header className="mb-5 flex flex-wrap items-start justify-between gap-4">
+    <main className="mx-auto max-w-7xl px-0 pb-4 sm:p-6 lg:p-8">
+      <header className={`${selectedConversationId ? 'hidden lg:flex' : 'flex'} mb-4 flex-wrap items-start justify-between gap-4 px-4 pt-4 sm:px-0 sm:pt-0 lg:mb-5`}>
         <div>
           <p className="text-sm font-semibold uppercase tracking-[0.16em] text-slate-500">Chats</p>
-          <h1 className="mt-1 text-3xl font-bold tracking-tight">Messages</h1>
+          <h1 className="mt-1 text-2xl font-bold tracking-tight sm:text-3xl">Messages</h1>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">Conversation lists, participants and cached messages now reopen from this device even without Internet. New messages still enter the same canonical delivery queue before transport.</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -316,9 +320,19 @@ export function MessagingPage() {
         </div>
       </header>
 
-      <div className="grid gap-5 lg:grid-cols-[340px_minmax(0,1fr)]">
+      {!selectedConversationId ? (
+        <div className="mb-3 flex items-center justify-between gap-3 px-4 sm:px-0 lg:hidden">
+          <div>
+            <p className="text-sm font-bold text-slate-800">Your conversations</p>
+            <p className="mt-0.5 text-xs text-slate-500">{browserOnline ? 'Synced when online' : 'Offline workspace active'}</p>
+          </div>
+          <button type="button" onClick={() => setMobileComposerOpen(true)} className="connectx-touch rounded-full bg-gradient-to-r from-cyan-500 via-blue-600 to-violet-700 px-4 text-sm font-bold text-white shadow-sm">+ New</button>
+        </div>
+      ) : null}
+
+      <div className="grid gap-0 sm:gap-5 lg:grid-cols-[340px_minmax(0,1fr)]">
         <aside className={`space-y-4 ${selectedConversationId ? 'hidden lg:block' : 'block'}`}>
-          <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <section className="hidden rounded-2xl border border-slate-200 bg-white p-4 shadow-sm lg:block">
             <div className="grid grid-cols-2 rounded-xl bg-slate-100 p-1 text-xs font-bold">
               <button type="button" onClick={() => setComposerMode('direct')} className={`rounded-lg px-3 py-2 ${composerMode === 'direct' ? 'bg-white shadow-sm' : 'text-slate-500'}`}>New chat</button>
               <button type="button" onClick={() => setComposerMode('group')} className={`rounded-lg px-3 py-2 ${composerMode === 'group' ? 'bg-white shadow-sm' : 'text-slate-500'}`}>New group</button>
@@ -351,7 +365,7 @@ export function MessagingPage() {
             ) : null}
           </section>
 
-          <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <section className="overflow-hidden border-y border-slate-200 bg-white shadow-sm sm:rounded-2xl sm:border lg:rounded-2xl">
             <div className="border-b border-slate-200 p-4">
               <div className="flex items-center justify-between gap-3">
                 <div>
@@ -381,12 +395,12 @@ export function MessagingPage() {
           </section>
         </aside>
 
-        <section className={`${selectedConversationId ? 'block' : 'hidden lg:block'} overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm`}>
+        <section className={`${selectedConversationId ? 'block' : 'hidden lg:block'} min-h-[calc(100dvh-8rem)] overflow-hidden border-y border-slate-200 bg-white shadow-sm sm:rounded-2xl sm:border lg:min-h-0`}>
           {selectedConversationId && selectedConversation ? (
             <>
-              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 p-4">
+              <div className="flex items-center justify-between gap-3 border-b border-slate-200 bg-white p-3 sm:p-4">
                 <div className="flex min-w-0 items-center gap-3">
-                  <button type="button" onClick={() => setSelectedConversationId(null)} className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-bold text-slate-600 lg:hidden">Back</button>
+                  <button type="button" onClick={() => setSelectedConversationId(null)} className="connectx-touch rounded-full bg-slate-100 px-3 text-xs font-bold text-slate-700 lg:hidden">← Back</button>
                   <div className="min-w-0"><h2 className="truncate font-semibold">{conversationLabel(selectedConversation)}</h2><p className="mt-0.5 text-xs text-slate-500">{selectedConversation.kind === 'group' ? `${selectedParticipants.length} members · private group` : 'Direct ConnectX chat'}</p></div>
                 </div>
                 {selectedConversation.kind === 'group' ? <button type="button" onClick={() => setShowGroupManager((current) => !current)} className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-bold text-slate-700">{showGroupManager ? 'Close group settings' : 'Group settings'}</button> : null}
@@ -396,7 +410,7 @@ export function MessagingPage() {
                 <GroupManagementPanel conversation={selectedConversation} participants={selectedParticipants} localUserId={localUserId} service={messagingService} online={browserOnline} onChanged={refresh} onLeft={() => setSelectedConversationId(null)} setNotice={setNotice} />
               ) : null}
 
-              <div className="min-h-[420px] space-y-3 bg-slate-50 p-4">
+              <div className="min-h-[calc(100dvh-19rem)] space-y-3 overflow-y-auto bg-slate-50 p-3 sm:p-4 lg:min-h-[420px]">
                 {selectedMessages.length === 0 ? (
                   <div className="mx-auto mt-16 max-w-sm rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-center"><p className="font-semibold text-slate-700">Start the conversation</p><p className="mt-1 text-sm leading-6 text-slate-500">Messages are stored locally first and synchronized when a supported path is available.</p></div>
                 ) : selectedMessages.map((message) => {
@@ -407,7 +421,7 @@ export function MessagingPage() {
                     : message.state
                   return (
                     <div key={message.localKey} className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
-                      <article className={`max-w-[85%] rounded-2xl px-4 py-3 ${mine ? 'bg-slate-950 text-white' : 'border border-slate-200 bg-white text-slate-900'}`}>
+                      <article className={`max-w-[88%] rounded-2xl px-3.5 py-2.5 sm:max-w-[85%] sm:px-4 sm:py-3 ${mine ? 'bg-slate-950 text-white' : 'border border-slate-200 bg-white text-slate-900'}`}>
                         {selectedConversation.kind === 'group' && !mine ? <p className="mb-1 text-[11px] font-bold text-blue-700">{sender?.display_name ?? 'Group member'}</p> : null}
                         <p className="whitespace-pre-wrap break-words text-sm">{message.body}</p>
                         <div className={`mt-2 flex flex-wrap items-center gap-2 text-[11px] ${mine ? 'text-slate-300' : 'text-slate-500'}`}><span>{formatTime(message.serverCreatedAt ?? message.createdAt)}</span><span>•</span><span>{visibleState}</span></div>
@@ -417,9 +431,12 @@ export function MessagingPage() {
                 })}
               </div>
 
-              <form className="border-t border-slate-200 p-4" onSubmit={sendMessage}>
-                <textarea className="min-h-20 w-full resize-y rounded-xl border border-slate-300 p-3 text-base outline-none focus:border-slate-600" placeholder="Message…" value={text} onChange={(event) => setText(event.target.value)} maxLength={4000} />
-                <div className="mt-2 flex flex-wrap items-center justify-between gap-3"><span className="text-xs text-slate-500">{browserOnline ? 'Ready to send' : 'Will queue until a path returns'}</span><button className="rounded-xl bg-slate-950 px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-50" disabled={busy || !text.trim()}>{browserOnline ? 'Send' : 'Queue'}</button></div>
+              <form className="sticky bottom-[calc(4.6rem+env(safe-area-inset-bottom))] z-30 border-t border-slate-200 bg-white/96 p-3 backdrop-blur sm:p-4 lg:static lg:bg-white" onSubmit={sendMessage}>
+                <div className="flex items-end gap-2">
+                  <textarea rows={1} className="min-h-12 max-h-32 min-w-0 flex-1 resize-none rounded-2xl border border-slate-300 px-3.5 py-3 text-base outline-none focus:border-blue-500 lg:min-h-20 lg:resize-y lg:rounded-xl" placeholder={browserOnline ? 'Message…' : 'Message will queue…'} value={text} onChange={(event) => setText(event.target.value)} maxLength={4000} />
+                  <button className="connectx-touch h-12 shrink-0 rounded-2xl bg-gradient-to-r from-cyan-500 via-blue-600 to-violet-700 px-4 text-sm font-bold text-white shadow-sm disabled:opacity-40 lg:px-5" disabled={busy || !text.trim()}>{browserOnline ? 'Send' : 'Queue'}</button>
+                </div>
+                <p className="mt-1.5 px-1 text-[11px] text-slate-400">{browserOnline ? 'Stored locally first, then delivered.' : 'Offline — this message stays safely queued on this device.'}</p>
               </form>
             </>
           ) : (
@@ -428,7 +445,37 @@ export function MessagingPage() {
         </section>
       </div>
 
-      <p aria-live="polite" className="mt-4 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">{notice}</p>
+      <MobileSheet
+        open={mobileComposerOpen}
+        title={composerMode === 'direct' ? 'New conversation' : 'New group'}
+        description={browserOnline ? 'Start a new ConnectX conversation.' : 'Creating new conversations requires Internet once.'}
+        onClose={() => setMobileComposerOpen(false)}
+      >
+        <div className="grid grid-cols-2 rounded-xl bg-slate-100 p-1 text-xs font-bold">
+          <button type="button" onClick={() => setComposerMode('direct')} className={`connectx-touch rounded-lg px-3 py-2 ${composerMode === 'direct' ? 'bg-white shadow-sm' : 'text-slate-500'}`}>New chat</button>
+          <button type="button" onClick={() => setComposerMode('group')} className={`connectx-touch rounded-lg px-3 py-2 ${composerMode === 'group' ? 'bg-white shadow-sm' : 'text-slate-500'}`}>New group</button>
+        </div>
+        {composerMode === 'direct' ? (
+          <form className="mt-4 space-y-3" onSubmit={createDirectConversation}>
+            <p className="text-xs leading-5 text-slate-500">Enter a shared ConnectX code. Existing cached chats remain available when offline.</p>
+            <input className="connectx-input w-full rounded-xl border border-slate-300 px-3 py-3 text-base uppercase placeholder:normal-case" placeholder="FM-12AB34CD56EF" value={recipientId} onChange={(event) => setRecipientId(event.target.value)} onBlur={() => setRecipientId((current) => normalizeContactInput(current))} autoCapitalize="characters" required />
+            <div className="grid grid-cols-2 gap-2">
+              <button type="button" onClick={() => void pasteContact()} className="connectx-touch rounded-xl border border-slate-300 bg-white px-3 text-sm font-bold text-slate-700">Paste</button>
+              <button type="button" onClick={() => setShowQrFoundation((current) => !current)} className="connectx-touch rounded-xl border border-slate-300 bg-white px-3 text-sm font-bold text-slate-700">Scan QR</button>
+            </div>
+            {showQrFoundation ? <p className="rounded-xl bg-slate-50 p-3 text-xs leading-5 text-slate-500">Camera scanning is not connected yet. Shared contact links and FM compatibility codes are already supported.</p> : null}
+            <button className="connectx-touch w-full rounded-xl bg-gradient-to-r from-cyan-500 via-blue-600 to-violet-700 px-4 text-sm font-bold text-white disabled:opacity-40" disabled={busy || !browserOnline}>Start chat</button>
+          </form>
+        ) : (
+          <form className="mt-4 space-y-3" onSubmit={createGroup}>
+            <input className="connectx-input w-full rounded-xl border border-slate-300 px-3 py-3 text-base" placeholder="Group name" value={groupTitle} onChange={(event) => setGroupTitle(event.target.value)} maxLength={120} required />
+            <textarea className="connectx-input min-h-28 w-full rounded-xl border border-slate-300 p-3 text-base uppercase placeholder:normal-case" placeholder={'Member codes, one per line\nFM-12AB34CD56EF'} value={groupMembers} onChange={(event) => setGroupMembers(event.target.value)} />
+            <button className="connectx-touch w-full rounded-xl bg-gradient-to-r from-cyan-500 via-blue-600 to-violet-700 px-4 text-sm font-bold text-white disabled:opacity-40" disabled={busy || !browserOnline || !groupTitle.trim()}>Create group</button>
+          </form>
+        )}
+      </MobileSheet>
+
+      <p aria-live="polite" className={`${selectedConversationId ? 'hidden lg:block' : 'block'} mx-4 mt-4 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600 sm:mx-0`}>{notice}</p>
     </main>
   )
 }

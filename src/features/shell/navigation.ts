@@ -1,8 +1,8 @@
-export type FieldMeshNavIcon = 'home' | 'chats' | 'sos' | 'network' | 'profile' | 'developer' | 'mesh' | 'gateway' | 'security' | 'delivery' | 'workspace'
+export type FieldMeshNavIcon = 'home' | 'chats' | 'sos' | 'network' | 'profile' | 'developer' | 'mesh' | 'gateway' | 'security' | 'delivery' | 'workspace' | 'mobile'
 
 export type FieldMeshNavItem = {
   label: string
-  to: '/' | '/messages' | '/sos' | '/network' | '/profile' | '/developer' | '/developer/mesh' | '/developer/gateway' | '/developer/security' | '/developer/delivery' | '/developer/workspace'
+  to: '/' | '/messages' | '/sos' | '/network' | '/profile' | '/developer' | '/developer/mesh' | '/developer/gateway' | '/developer/security' | '/developer/delivery' | '/developer/workspace' | '/developer/mobile-preview'
   description: string
   icon: FieldMeshNavIcon
 }
@@ -24,6 +24,7 @@ export const DEVELOPER_NAV_ITEMS: FieldMeshNavItem[] = [
   { label: 'Security', to: '/developer/security', description: 'Crypto foundation diagnostics', icon: 'security' },
   { label: 'Delivery', to: '/developer/delivery', description: 'Canonical delivery diagnostics', icon: 'delivery' },
   { label: 'Workspace', to: '/developer/workspace', description: 'Offline workspace diagnostics', icon: 'workspace' },
+  { label: 'Mobile preview', to: '/developer/mobile-preview', description: 'Phone and tablet UX preview', icon: 'mobile' },
 ]
 
 export function isDeveloperPath(pathname: string): boolean {

@@ -11,6 +11,7 @@ import { GatewaySafetyTransportAdapter, SimulatedSafetyInternetAdapter } from '.
 import type { SafetySnapshot, SosRecord } from '../../core/sos/types'
 import { useAuth } from '../auth/AuthProvider'
 import { readDeveloperMode, subscribeDeveloperMode } from '../shell/developerMode'
+import { MobileSheet } from '../mobile/MobileSheet'
 
 const SAFETY_GATEWAY_ID = 'SOS-G1'
 const SIMULATED_FIX = {
@@ -280,7 +281,7 @@ export function SosPage() {
     <main className="mx-auto max-w-6xl p-4 sm:p-6 lg:p-8">
       <header>
         <p className="text-sm font-semibold uppercase tracking-[0.16em] text-rose-600">Safety</p>
-        <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-950">SOS & location</h1>
+        <h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">SOS & location</h1>
         <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">Send an emergency-priority alert even when a GPS fix is unavailable. Location can be captured and shared separately.</p>
       </header>
 
@@ -289,7 +290,7 @@ export function SosPage() {
       </section>
 
       <div className="mt-5 grid gap-5 lg:grid-cols-2">
-        <section className="rounded-2xl border border-rose-200 bg-white p-5 shadow-sm">
+        <section className="rounded-2xl border border-rose-200 bg-white p-4 shadow-sm sm:p-5">
           <p className="text-xs font-bold uppercase tracking-[0.14em] text-rose-600">Emergency priority</p>
           <h2 className="mt-1 text-2xl font-bold text-slate-950">Send SOS</h2>
           <p className="mt-2 text-sm leading-6 text-slate-600">GPS is included when available, but lack of GPS never blocks the alert.</p>
@@ -311,20 +312,20 @@ export function SosPage() {
           </div>
 
           {confirmSos ? (
-            <div className="mt-4 rounded-2xl border border-rose-300 bg-rose-50 p-4">
+            <div className="mt-4 hidden rounded-2xl border border-rose-300 bg-rose-50 p-4 lg:block">
               <p className="font-bold text-rose-950">Confirm emergency SOS</p>
               <p className="mt-1 text-sm leading-5 text-rose-800">This sends the alert immediately through the best available prototype path. GPS is optional.</p>
               <div className="mt-3 grid grid-cols-2 gap-2">
-                <button type="button" disabled={busy} onClick={() => setConfirmSos(false)} className="rounded-xl border border-rose-300 bg-white px-4 py-3 text-sm font-bold text-rose-800 disabled:opacity-50">Cancel</button>
-                <button type="button" disabled={busy} onClick={sendSos} className="rounded-xl bg-rose-700 px-4 py-3 text-sm font-bold text-white disabled:opacity-50">Send SOS now</button>
+                <button type="button" disabled={busy} onClick={() => setConfirmSos(false)} className="connectx-touch rounded-xl border border-rose-300 bg-white px-4 text-sm font-bold text-rose-800 disabled:opacity-50">Cancel</button>
+                <button type="button" disabled={busy} onClick={sendSos} className="connectx-touch rounded-xl bg-rose-700 px-4 text-sm font-bold text-white disabled:opacity-50">Send SOS now</button>
               </div>
             </div>
           ) : (
-            <button type="button" disabled={busy} onClick={() => setConfirmSos(true)} className="mt-4 w-full rounded-2xl bg-rose-700 px-5 py-4 text-lg font-bold text-white shadow-sm disabled:opacity-50">SEND SOS</button>
+            <button type="button" disabled={busy} onClick={() => setConfirmSos(true)} className="connectx-touch mt-4 w-full rounded-2xl bg-rose-700 px-5 text-lg font-bold text-white shadow-sm disabled:opacity-50">SEND SOS</button>
           )}
         </section>
 
-        <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
           <p className="text-xs font-bold uppercase tracking-[0.14em] text-sky-700">Location</p>
           <h2 className="mt-1 text-2xl font-bold text-slate-950">My location</h2>
           {currentFix ? (
@@ -338,8 +339,8 @@ export function SosPage() {
           )}
 
           <div className="mt-4 grid gap-2 sm:grid-cols-2">
-            <button type="button" disabled={busy} onClick={captureLocation} className="rounded-xl border border-slate-300 px-3 py-2.5 text-sm font-bold disabled:opacity-50">Capture GPS</button>
-            <button type="button" disabled={busy || !currentFix} onClick={sendLocationUpdate} className="rounded-xl bg-sky-700 px-3 py-2.5 text-sm font-bold text-white disabled:opacity-40">Share location</button>
+            <button type="button" disabled={busy} onClick={captureLocation} className="connectx-touch rounded-xl border border-slate-300 px-3 text-sm font-bold disabled:opacity-50">Capture GPS</button>
+            <button type="button" disabled={busy || !currentFix} onClick={sendLocationUpdate} className="connectx-touch rounded-xl bg-sky-700 px-3 text-sm font-bold text-white disabled:opacity-40">Share location</button>
           </div>
 
           <details className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
@@ -356,6 +357,23 @@ export function SosPage() {
           </details>
         </section>
       </div>
+
+      <MobileSheet
+        open={confirmSos}
+        title="Confirm emergency SOS"
+        description="This sends the alert immediately through the best available prototype path. GPS is optional."
+        onClose={() => setConfirmSos(false)}
+        tone="danger"
+      >
+        <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm leading-6 text-rose-900">
+          <p className="font-bold capitalize">{category} emergency</p>
+          <p className="mt-1">{currentFix ? 'Current location will be attached.' : 'No GPS fix is available, but the SOS can still be sent.'}</p>
+        </div>
+        <div className="mt-4 grid grid-cols-2 gap-2">
+          <button type="button" disabled={busy} onClick={() => setConfirmSos(false)} className="connectx-touch rounded-xl border border-rose-300 bg-white px-4 text-sm font-bold text-rose-800 disabled:opacity-50">Cancel</button>
+          <button type="button" disabled={busy} onClick={sendSos} className="connectx-touch rounded-xl bg-rose-700 px-4 text-sm font-bold text-white disabled:opacity-50">Send SOS now</button>
+        </div>
+      </MobileSheet>
 
       {activeSos ? (
         <section className="mt-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">

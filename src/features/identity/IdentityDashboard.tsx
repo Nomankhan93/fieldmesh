@@ -175,7 +175,7 @@ export function IdentityDashboard() {
     <main className="mx-auto max-w-5xl p-4 sm:p-6 lg:p-8">
       <header>
         <p className="text-sm font-semibold uppercase tracking-[0.16em] text-slate-500">Profile</p>
-        <h1 className="mt-1 text-3xl font-bold tracking-tight">Profile & devices</h1>
+        <h1 className="mt-1 text-2xl font-bold tracking-tight sm:text-3xl">Profile & devices</h1>
         <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">Manage your account, share your ConnectX contact code and prepare compatible radio devices.</p>
       </header>
 
@@ -186,12 +186,12 @@ export function IdentityDashboard() {
             <h2 className="mt-1 text-2xl font-bold">{profile?.display_name ?? 'ConnectX user'}</h2>
             <p className="mt-1 text-sm text-slate-500">{authenticatedEmail}</p>
           </div>
-          <div className="min-w-[220px] rounded-xl border border-slate-200 bg-slate-50 p-4">
+          <div className="w-full rounded-xl border border-slate-200 bg-slate-50 p-4 sm:w-auto sm:min-w-[220px]">
             <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Your ConnectX code</p>
             <p className="mt-1 font-mono text-lg font-bold tracking-wide text-slate-900">{contactCode}</p>
             <div className="mt-3 flex flex-wrap gap-2">
-              <button type="button" disabled={!profile} onClick={() => void copyContactCode()} className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-bold disabled:opacity-50">Copy code</button>
-              <button type="button" disabled={!profile} onClick={() => void shareContact()} className="rounded-lg bg-slate-950 px-3 py-1.5 text-xs font-bold text-white disabled:opacity-50">Share contact</button>
+              <button type="button" disabled={!profile} onClick={() => void copyContactCode()} className="connectx-touch rounded-lg border border-slate-300 bg-white px-3 text-xs font-bold disabled:opacity-50">Copy code</button>
+              <button type="button" disabled={!profile} onClick={() => void shareContact()} className="connectx-touch rounded-lg bg-slate-950 px-3 text-xs font-bold text-white disabled:opacity-50">Share contact</button>
             </div>
           </div>
         </div>

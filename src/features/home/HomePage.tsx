@@ -69,11 +69,11 @@ function SignedInHome({ online, email }: { online: boolean; email: string }) {
             <p className="text-xs font-medium text-slate-500">{APP_BRAND.tagline}</p>
           </div>
         </div>
-        <h1 className="mt-4 text-3xl font-bold tracking-tight">Communication, simplified.</h1>
+        <h1 className="mt-4 text-2xl font-bold tracking-tight sm:text-3xl">Communication, simplified.</h1>
         <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">Chat, share location, send an SOS and see whether ConnectX has a communication path available.</p>
       </header>
 
-      <section className="mt-6 grid gap-4 md:grid-cols-3">
+      <section className="mt-5 grid gap-3 sm:mt-6 sm:gap-4 md:grid-cols-3">
         <QuickAction title="Chats" detail="Open direct and group conversations and send messages." to="/messages" primary />
         <QuickAction title="SOS & location" detail="Create an emergency alert or share a location fix." to="/sos" danger />
         <QuickAction title="Network" detail="See whether Internet is available and what fallback capability exists." to="/network" />

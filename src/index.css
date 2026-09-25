@@ -45,3 +45,40 @@ textarea {
     min-height: 100dvh;
   }
 }
+
+/* ConnectX mobile interaction primitives */
+.connectx-touch {
+  min-height: 44px;
+  touch-action: manipulation;
+}
+
+.connectx-input {
+  font-size: 16px;
+}
+
+@media (max-width: 1023px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+
+  html {
+    scroll-padding-bottom: calc(5.5rem + env(safe-area-inset-bottom));
+  }
+
+  body {
+    -webkit-text-size-adjust: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}

@@ -35,12 +35,14 @@ describe('ConnectX product navigation', () => {
       '/developer/security',
       '/developer/delivery',
       '/developer/workspace',
+      '/developer/mobile-preview',
     ])
     expect(isDeveloperPath('/developer/mesh')).toBe(true)
     expect(isDeveloperPath('/developer/gateway')).toBe(true)
     expect(isDeveloperPath('/developer/security')).toBe(true)
     expect(isDeveloperPath('/developer/delivery')).toBe(true)
     expect(isDeveloperPath('/developer/workspace')).toBe(true)
+    expect(isDeveloperPath('/developer/mobile-preview')).toBe(true)
     expect(isDeveloperPath('/simulator')).toBe(true)
     expect(isDeveloperPath('/gateway')).toBe(true)
     expect(isDeveloperPath('/messages')).toBe(false)

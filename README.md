@@ -83,3 +83,7 @@ User-facing behavior:
 - ConnectX retains its offline-first IndexedDB queues; the service worker only provides the application shell/static asset layer.
 
 See `docs/PWA_PRODUCTIZATION.md` for lifecycle and acceptance details.
+
+## Mobile preview & responsive UX
+
+ConnectX includes a phone-first user experience on small screens: compact branded navigation, a single-pane chat list → conversation flow, mobile bottom sheets, safe-area-aware controls, and touch-friendly interaction targets. Developer Mode also exposes `/developer/mobile-preview` for realistic phone/tablet viewport review without adding mobile-only behavior to the normal navigation.

@@ -4,6 +4,7 @@ import { APP_BRAND } from '../../config/brand'
 import { useAuth } from '../auth/AuthProvider'
 import { NavIcon } from './NavIcon'
 import { PwaStatusCenter } from '../pwa/PwaStatusCenter'
+import { usePwa } from '../pwa/PwaProvider'
 import {
   DEVELOPER_NAV_ITEMS,
   MOBILE_NAV_ITEMS,
@@ -40,10 +41,13 @@ function NavLink({
       <Link
         to={item.to}
         aria-label={item.label}
-        className={`relative flex min-w-0 flex-1 flex-col items-center justify-center rounded-xl px-1 py-1.5 text-[10px] font-semibold ${active ? (danger ? 'bg-rose-700 text-white' : 'bg-gradient-to-br from-cyan-500 via-blue-600 to-violet-700 text-white') : danger ? 'text-rose-700' : 'text-slate-600'}`}
+        className={`relative flex min-w-0 flex-1 flex-col items-center justify-center rounded-2xl px-1 py-1.5 text-[10px] font-semibold transition ${active ? (danger ? 'text-rose-700' : 'text-blue-700') : danger ? 'text-rose-600' : 'text-slate-500'}`}
       >
-        <NavIcon name={item.icon} className="h-5 w-5" />
-        <span className="mt-1 truncate">{item.label}</span>
+        <span className={`relative flex h-8 w-12 items-center justify-center rounded-full transition ${active ? (danger ? 'bg-rose-100' : 'bg-blue-100') : ''}`}>
+          <NavIcon name={item.icon} className="h-5 w-5" />
+          {active ? <span className={`absolute -bottom-1 h-1 w-1 rounded-full ${danger ? 'bg-rose-600' : 'bg-blue-600'}`} /> : null}
+        </span>
+        <span className="mt-1 max-w-full truncate">{item.label}</span>
       </Link>
     )
   }
@@ -84,6 +88,7 @@ function BrandIdentity({ compact = false, inverted = false }: { compact?: boolea
 
 export function AppShell() {
   const { session } = useAuth()
+  const pwa = usePwa()
   const pathname = useRouterState({ select: (state) => state.location.pathname })
   const developer = isDeveloperPath(pathname)
   const [developerMode, setDeveloperMode] = useState(readDeveloperMode)
@@ -116,17 +121,28 @@ export function AppShell() {
 
   const navItems = developer && developerMode ? DEVELOPER_NAV_ITEMS : USER_NAV_ITEMS
   const canRenderDeveloper = !developer || developerMode
+  const mobileScreen = navItems.find((item) => isNavItemActive(pathname, item.to))
+  const mobileTitle = mobileScreen?.label ?? (developer ? 'Developer tools' : APP_BRAND.name)
 
   return (
     <div className="min-h-screen bg-[#f7f9ff] text-slate-950">
       <PwaStatusCenter />
-      <header className="sticky top-0 z-40 border-b border-blue-100 bg-white/95 backdrop-blur lg:hidden" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
-        <div className="flex items-center justify-between px-4 py-2.5">
-          <Link to="/" aria-label="ConnectX home"><BrandIdentity compact /></Link>
+      <header className="sticky top-0 z-40 border-b border-blue-100/80 bg-white/92 backdrop-blur-xl lg:hidden" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
+        <div className="flex min-h-14 items-center justify-between gap-3 px-4 py-2">
+          <Link to={developer && developerMode ? '/developer' : '/'} aria-label="ConnectX home" className="flex min-w-0 items-center gap-2.5">
+            <img src={APP_BRAND.icon} alt="" className="h-9 w-9 shrink-0 rounded-xl shadow-sm" />
+            <span className="min-w-0">
+              <span className="block truncate text-sm font-bold text-slate-950">{mobileTitle}</span>
+              <span className="block truncate text-[10px] font-semibold text-slate-400">{developer && developerMode ? 'Engineering preview' : APP_BRAND.tagline}</span>
+            </span>
+          </Link>
           {developer && developerMode ? (
-            <Link to="/" className="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-900">Exit developer tools</Link>
+            <Link to="/" className="connectx-touch flex items-center rounded-full bg-amber-100 px-3 text-xs font-bold text-amber-900">Exit tools</Link>
           ) : (
-            <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-800">Connected</span>
+            <span className={`flex h-8 shrink-0 items-center gap-1.5 rounded-full px-2.5 text-[11px] font-bold ${pwa.online ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-900'}`}>
+              <span className={`h-2 w-2 rounded-full ${pwa.online ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+              {pwa.online ? 'Online' : 'Offline'}
+            </span>
           )}
         </div>
       </header>
@@ -179,10 +195,11 @@ export function AppShell() {
 
       {!developer ? (
         <nav
-          className="fixed inset-x-0 bottom-0 z-50 border-t border-blue-100 bg-white/95 px-1.5 pt-1.5 shadow-[0_-8px_24px_rgba(15,23,42,0.06)] backdrop-blur lg:hidden"
-          style={{ paddingBottom: 'max(0.375rem, env(safe-area-inset-bottom))' }}
+          className="fixed inset-x-0 bottom-0 z-50 border-t border-blue-100/80 bg-white/92 px-1.5 pt-1 shadow-[0_-10px_30px_rgba(15,23,42,0.08)] backdrop-blur-xl lg:hidden"
+          style={{ paddingBottom: 'max(0.35rem, env(safe-area-inset-bottom))' }}
+          aria-label="Primary navigation"
         >
-          <div className="mx-auto flex max-w-lg gap-1">
+          <div className="mx-auto flex min-h-[4.15rem] max-w-lg gap-0.5">
             {MOBILE_NAV_ITEMS.map((item) => <NavLink key={item.to} item={item} pathname={pathname} compact />)}
           </div>
         </nav>

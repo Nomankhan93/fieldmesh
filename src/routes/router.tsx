@@ -13,6 +13,7 @@ const LazyDeveloperHomePage = lazy(async () => ({ default: (await import('../fea
 const LazySecurityFoundationPage = lazy(async () => ({ default: (await import('../features/security/SecurityFoundationPage')).SecurityFoundationPage }))
 const LazyDeliveryCoordinatorPage = lazy(async () => ({ default: (await import('../features/delivery/DeliveryCoordinatorPage')).DeliveryCoordinatorPage }))
 const LazyOfflineWorkspacePage = lazy(async () => ({ default: (await import('../features/workspace/OfflineWorkspacePage')).OfflineWorkspacePage }))
+const LazyMobilePreviewPage = lazy(async () => ({ default: (await import('../features/mobile/MobilePreviewPage')).MobilePreviewPage }))
 
 function withRouteSuspense(Page: LazyExoticComponent<ComponentType>) {
   return function LazyRoutePage() {
@@ -42,6 +43,7 @@ const DeveloperHomeRoutePage = withRouteSuspense(LazyDeveloperHomePage)
 const SecurityFoundationRoutePage = withRouteSuspense(LazySecurityFoundationPage)
 const DeliveryCoordinatorRoutePage = withRouteSuspense(LazyDeliveryCoordinatorPage)
 const OfflineWorkspaceRoutePage = withRouteSuspense(LazyOfflineWorkspacePage)
+const MobilePreviewRoutePage = withRouteSuspense(LazyMobilePreviewPage)
 
 const rootRoute = createRootRoute({ component: AppShell })
 
@@ -111,6 +113,12 @@ const developerWorkspaceRoute = createRoute({
   component: OfflineWorkspaceRoutePage,
 })
 
+const developerMobilePreviewRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/developer/mobile-preview',
+  component: MobilePreviewRoutePage,
+})
+
 // Compatibility aliases for bookmarks created before the product-shell split.
 const simulatorAliasRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -136,6 +144,7 @@ const routeTree = rootRoute.addChildren([
   developerSecurityRoute,
   developerDeliveryRoute,
   developerWorkspaceRoute,
+  developerMobilePreviewRoute,
   simulatorAliasRoute,
   gatewayAliasRoute,
 ])

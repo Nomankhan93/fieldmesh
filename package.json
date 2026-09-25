@@ -21,13 +21,14 @@
     "test:mesh": "vitest run src/core/mesh/simulator.test.ts src/features/simulator/simulatorView.test.ts",
     "test:gateway": "vitest run src/core/gateway/agent.test.ts",
     "test:sos": "vitest run src/core/location/location.test.ts src/core/sos/codec.test.ts src/core/sos/service.test.ts src/core/message/model.test.ts",
-    "test:ui": "vitest run src/features/shell/navigation.test.ts src/features/contacts/contactCode.test.ts src/features/network/networkStatus.test.ts src/core/groups/permissions.test.ts",
+    "test:ui": "vitest run src/features/shell/navigation.test.ts src/features/contacts/contactCode.test.ts src/features/network/networkStatus.test.ts src/core/groups/permissions.test.ts src/features/mobile/model.test.ts",
     "test:groups": "node scripts/test-groups-permissions.mjs",
     "test:crypto": "vitest run src/core/crypto/envelope.test.ts src/core/groups/permissions.test.ts",
     "test:authz": "node scripts/test-authorization-integrity.mjs",
     "test:delivery": "vitest run src/core/delivery/coordinator.test.ts src/core/delivery/internetAdapter.test.ts",
     "test:workspace": "vitest run src/core/workspace/model.test.ts src/features/shell/navigation.test.ts",
-    "test:pwa": "vitest run src/features/pwa/model.test.ts src/config/brand.test.ts"
+    "test:pwa": "vitest run src/features/pwa/model.test.ts src/config/brand.test.ts",
+    "test:mobile": "vitest run src/features/mobile/model.test.ts src/features/shell/navigation.test.ts src/config/brand.test.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.0",
