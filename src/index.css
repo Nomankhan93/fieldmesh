@@ -82,3 +82,32 @@ textarea {
     animation-iteration-count: 1 !important;
   }
 }
+
+/* ConnectX familiar messenger surfaces */
+.connectx-chat-wallpaper {
+  background-color: #eef3ff;
+  background-image:
+    radial-gradient(circle at 18% 20%, rgba(8, 217, 255, 0.07) 0 2px, transparent 2.5px),
+    radial-gradient(circle at 78% 38%, rgba(124, 44, 255, 0.06) 0 2px, transparent 2.5px),
+    linear-gradient(135deg, rgba(255,255,255,0.72), rgba(238,243,255,0.84));
+  background-size: 48px 48px, 64px 64px, auto;
+}
+
+.connectx-message-in,
+.connectx-message-out {
+  position: relative;
+  box-shadow: 0 1px 1px rgba(15, 23, 42, 0.08);
+}
+
+.connectx-message-in {
+  border-top-left-radius: 0.4rem;
+}
+
+.connectx-message-out {
+  border-top-right-radius: 0.4rem;
+}
+
+.connectx-chat-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(100, 116, 139, 0.35) transparent;
+}

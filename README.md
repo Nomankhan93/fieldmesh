@@ -1,6 +1,13 @@
-# ConnectX 0.8.1.3 — Messaging Sync Reliability & Conversation Retention
+# ConnectX 0.8.1.4 — Familiar Messenger UI & Mobile Chat Experience
 
 ConnectX is the user-facing brand for the resilient messaging platform. The validated internal protocol and database identifiers continue to use the FieldMesh name for backward compatibility. The platform is designed around three eventual communication paths:
+
+
+## 0.8.1.4 familiar messenger UI
+
+The normal Chats experience now uses familiar messenger interaction patterns while retaining ConnectX branding and the 0.8.1.3 reliability fixes. The chat list includes generated avatars, search, last-message/time metadata and unread badges. Mobile conversations use a full-screen flow with date separators, delivery-state ticks and a sticky circular send action. Desktop retains a two-pane layout with a compact compose panel.
+
+See `docs/FAMILIAR_MESSENGER_UI.md`.
 
 ## 0.8.1.3 reliability hotfix
 
