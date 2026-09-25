@@ -1,7 +1,7 @@
 export const APP_BRAND = {
   name: 'ConnectX',
   tagline: 'Stay Connected. Anywhere.',
-  version: '0.8.1.4',
+  version: '0.8.1.5',
   icon: '/icons/connectx-192.png',
   logo: '/brand/connectx-logo.webp',
   themeColor: '#07113f',

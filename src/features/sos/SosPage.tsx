@@ -278,81 +278,78 @@ export function SosPage() {
   const events = useMemo(() => [...snapshot.events].reverse().slice(0, 60), [snapshot.events])
 
   return (
-    <main className="mx-auto max-w-6xl p-4 sm:p-6 lg:p-8">
-      <header>
+    <main className="mx-auto max-w-5xl p-4 sm:p-6 lg:p-8">
+      <header className="hidden lg:block">
         <p className="text-sm font-semibold uppercase tracking-[0.16em] text-rose-600">Safety</p>
-        <h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">SOS & location</h1>
-        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">Send an emergency-priority alert even when a GPS fix is unavailable. Location can be captured and shared separately.</p>
+        <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-950">SOS & location</h1>
+        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">Emergency alerts remain sendable even without a GPS fix.</p>
       </header>
 
-      <section className="mt-5 rounded-2xl border border-rose-300 bg-rose-50 p-4 text-sm leading-6 text-rose-950">
-        <strong>Prototype only:</strong> this does not contact police, ambulance, rescue services or any real emergency responder. Radio and gateway paths are still software simulations.
+      <section className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-900 lg:mt-5">
+        <div className="flex items-start gap-3">
+          <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-rose-100 font-black text-rose-700">!</span>
+          <div><p className="font-bold">Prototype mode</p><p className="mt-0.5 text-xs leading-5 text-rose-800">SOS does not contact real emergency services yet.</p></div>
+        </div>
       </section>
 
-      <div className="mt-5 grid gap-5 lg:grid-cols-2">
+      <div className="mt-4 grid gap-4 lg:grid-cols-2">
         <section className="rounded-2xl border border-rose-200 bg-white p-4 shadow-sm sm:p-5">
-          <p className="text-xs font-bold uppercase tracking-[0.14em] text-rose-600">Emergency priority</p>
-          <h2 className="mt-1 text-2xl font-bold text-slate-950">Send SOS</h2>
-          <p className="mt-2 text-sm leading-6 text-slate-600">GPS is included when available, but lack of GPS never blocks the alert.</p>
+          <div className="flex items-start justify-between gap-3">
+            <div><p className="text-xs font-bold uppercase tracking-[0.14em] text-rose-600">Emergency</p><h2 className="mt-1 text-xl font-bold text-slate-950">Send SOS</h2></div>
+            <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${currentFix ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'}`}>{currentFix ? 'GPS ready' : 'GPS optional'}</span>
+          </div>
 
-          <label className="mt-5 block text-sm font-semibold text-slate-700">
-            Emergency type
-            <select value={category} onChange={(event) => setCategory(event.target.value as SosCategory)} className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-3 py-3">
-              {SOS_CATEGORIES.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
-            </select>
-          </label>
+          <p className="mt-4 text-xs font-bold uppercase tracking-[0.1em] text-slate-500">Emergency type</p>
+          <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
+            {SOS_CATEGORIES.map((item) => (
+              <button key={item.value} type="button" aria-pressed={category === item.value} onClick={() => setCategory(item.value)} className={`connectx-touch rounded-xl border px-3 text-sm font-bold ${category === item.value ? 'border-rose-600 bg-rose-50 text-rose-800' : 'border-slate-200 bg-white text-slate-700'}`}>{item.label}</button>
+            ))}
+          </div>
 
           <label className="mt-4 block text-sm font-semibold text-slate-700">
-            Short message <span className="font-normal text-slate-400">(optional)</span>
-            <textarea value={note} onChange={(event) => setNote(event.target.value)} maxLength={240} placeholder="What happened or what help is needed?" className="mt-2 min-h-24 w-full resize-y rounded-xl border border-slate-300 p-3" />
+            Message <span className="font-normal text-slate-400">(optional)</span>
+            <textarea value={note} onChange={(event) => setNote(event.target.value)} maxLength={240} placeholder="What happened or what help is needed?" className="connectx-input mt-2 min-h-20 w-full resize-y rounded-xl border border-slate-300 p-3" />
           </label>
 
-          <div className="mt-4 rounded-xl bg-slate-50 p-3 text-sm text-slate-600">
-            {currentFix ? <>Location ready · ±{Math.round(currentFix.accuracy)} m reported accuracy</> : <>No location fix · SOS can still be sent</>}
+          <div className="mt-3 flex items-center gap-2 rounded-xl bg-slate-50 px-3 py-2.5 text-xs text-slate-600">
+            <span className={`h-2 w-2 rounded-full ${currentFix ? 'bg-emerald-500' : 'bg-slate-300'}`} />
+            {currentFix ? `Location attached · ±${Math.round(currentFix.accuracy)} m` : 'No location fix · SOS can still be sent'}
           </div>
 
           {confirmSos ? (
             <div className="mt-4 hidden rounded-2xl border border-rose-300 bg-rose-50 p-4 lg:block">
               <p className="font-bold text-rose-950">Confirm emergency SOS</p>
-              <p className="mt-1 text-sm leading-5 text-rose-800">This sends the alert immediately through the best available prototype path. GPS is optional.</p>
-              <div className="mt-3 grid grid-cols-2 gap-2">
-                <button type="button" disabled={busy} onClick={() => setConfirmSos(false)} className="connectx-touch rounded-xl border border-rose-300 bg-white px-4 text-sm font-bold text-rose-800 disabled:opacity-50">Cancel</button>
-                <button type="button" disabled={busy} onClick={sendSos} className="connectx-touch rounded-xl bg-rose-700 px-4 text-sm font-bold text-white disabled:opacity-50">Send SOS now</button>
-              </div>
+              <p className="mt-1 text-sm leading-5 text-rose-800">Send this {category} alert now?</p>
+              <div className="mt-3 grid grid-cols-2 gap-2"><button type="button" disabled={busy} onClick={() => setConfirmSos(false)} className="connectx-touch rounded-xl border border-rose-300 bg-white px-4 text-sm font-bold text-rose-800 disabled:opacity-50">Cancel</button><button type="button" disabled={busy} onClick={sendSos} className="connectx-touch rounded-xl bg-rose-700 px-4 text-sm font-bold text-white disabled:opacity-50">Send SOS now</button></div>
             </div>
           ) : (
-            <button type="button" disabled={busy} onClick={() => setConfirmSos(true)} className="connectx-touch mt-4 w-full rounded-2xl bg-rose-700 px-5 text-lg font-bold text-white shadow-sm disabled:opacity-50">SEND SOS</button>
+            <button type="button" disabled={busy} onClick={() => setConfirmSos(true)} className="connectx-touch mt-4 w-full rounded-2xl bg-rose-700 px-5 text-base font-bold text-white shadow-sm disabled:opacity-50">Send SOS</button>
           )}
         </section>
 
         <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
-          <p className="text-xs font-bold uppercase tracking-[0.14em] text-sky-700">Location</p>
-          <h2 className="mt-1 text-2xl font-bold text-slate-950">My location</h2>
+          <div className="flex items-start justify-between gap-3">
+            <div><p className="text-xs font-bold uppercase tracking-[0.14em] text-sky-700">Location</p><h2 className="mt-1 text-xl font-bold text-slate-950">My location</h2></div>
+            <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${currentFix ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'}`}>{currentFix ? 'Captured' : 'Not captured'}</span>
+          </div>
+
           {currentFix ? (
-            <div className="mt-4 rounded-xl bg-slate-50 p-4 text-sm">
-              <div className="font-mono text-sm font-bold text-slate-800">{currentFix.latitude.toFixed(5)}, {currentFix.longitude.toFixed(5)}</div>
-              <div className="mt-1 text-slate-500">Accuracy ±{Math.round(currentFix.accuracy)} m</div>
-              <div className="text-slate-500">Captured {formatTime(currentFix.capturedAt)}</div>
-            </div>
+            <div className="mt-4 rounded-xl bg-slate-50 p-3 text-sm"><p className="font-mono font-bold text-slate-800">{currentFix.latitude.toFixed(5)}, {currentFix.longitude.toFixed(5)}</p><p className="mt-1 text-xs text-slate-500">Accuracy ±{Math.round(currentFix.accuracy)} m · {formatTime(currentFix.capturedAt)}</p></div>
           ) : (
-            <div className="mt-4 rounded-xl border border-dashed border-slate-300 p-5 text-sm text-slate-500">No location captured yet.</div>
+            <div className="mt-4 rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-500">Capture GPS when you want to attach or share your location.</div>
           )}
 
-          <div className="mt-4 grid gap-2 sm:grid-cols-2">
-            <button type="button" disabled={busy} onClick={captureLocation} className="connectx-touch rounded-xl border border-slate-300 px-3 text-sm font-bold disabled:opacity-50">Capture GPS</button>
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <button type="button" disabled={busy} onClick={captureLocation} className="connectx-touch rounded-xl border border-slate-300 bg-white px-3 text-sm font-bold disabled:opacity-50">Capture GPS</button>
             <button type="button" disabled={busy || !currentFix} onClick={sendLocationUpdate} className="connectx-touch rounded-xl bg-sky-700 px-3 text-sm font-bold text-white disabled:opacity-40">Share location</button>
           </div>
 
-          <details className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
-            <summary className="cursor-pointer text-sm font-bold text-slate-700">Periodic location sharing</summary>
-            <p className="mt-2 text-xs leading-5 text-slate-500">Foreground only. Browser background reliability is not guaranteed.</p>
+          <details className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
+            <summary className="cursor-pointer text-sm font-bold text-slate-700">Live location sharing <span className="ml-1 text-xs font-normal text-slate-400">{periodicEnabled ? 'On' : 'Off'}</span></summary>
+            <p className="mt-2 text-xs leading-5 text-slate-500">Live sharing may pause when ConnectX is closed.</p>
             <div className="mt-3 flex items-center justify-between gap-3">
-              <select value={periodicMinutes} onChange={(event) => setPeriodicMinutes(Number(event.target.value))} disabled={periodicEnabled} className="rounded-lg border border-slate-300 bg-white px-2 py-2 text-sm disabled:bg-slate-100">
-                <option value={1}>Every 1 minute</option>
-                <option value={5}>Every 5 minutes</option>
-                <option value={15}>Every 15 minutes</option>
-              </select>
-              <label className="flex items-center gap-2 text-sm font-semibold"><input type="checkbox" checked={periodicEnabled} onChange={(event) => setPeriodicEnabled(event.target.checked)} className="h-5 w-5" /> Enabled</label>
+              <select value={periodicMinutes} onChange={(event) => setPeriodicMinutes(Number(event.target.value))} disabled={periodicEnabled} className="connectx-input rounded-lg border border-slate-300 bg-white px-2 py-2 text-sm disabled:bg-slate-100"><option value={1}>Every 1 minute</option><option value={5}>Every 5 minutes</option><option value={15}>Every 15 minutes</option></select>
+              <label className="flex items-center gap-2 text-sm font-semibold"><input type="checkbox" checked={periodicEnabled} onChange={(event) => setPeriodicEnabled(event.target.checked)} className="h-5 w-5" />{periodicEnabled ? 'On' : 'Off'}</label>
             </div>
           </details>
         </section>
@@ -461,7 +458,7 @@ export function SosPage() {
 
       ) : null}
 
-      <p aria-live="polite" className="mt-5 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">{notice}</p>
+      {notice && notice !== 'Safety tools ready.' ? <p aria-live="polite" className="mt-4 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">{notice}</p> : null}
     </main>
   )
 }

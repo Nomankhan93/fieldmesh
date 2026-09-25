@@ -30,7 +30,8 @@
     "test:pwa": "vitest run src/features/pwa/model.test.ts src/config/brand.test.ts",
     "test:mobile": "vitest run src/features/mobile/model.test.ts src/features/shell/navigation.test.ts src/config/brand.test.ts",
     "test:sync-reliability": "vitest run src/core/workspace/syncPolicy.test.ts src/core/workspace/model.test.ts src/core/delivery/coordinator.test.ts src/core/delivery/internetAdapter.test.ts",
-    "test:messenger-ui": "vitest run src/features/messaging/messengerUi.test.ts src/features/mobile/model.test.ts src/features/shell/navigation.test.ts"
+    "test:messenger-ui": "vitest run src/features/messaging/messengerUi.test.ts src/features/mobile/model.test.ts src/features/shell/navigation.test.ts",
+    "test:mobile-ux": "vitest run src/features/mobile/informationHierarchy.test.ts src/features/mobile/model.test.ts src/features/messaging/messengerUi.test.ts src/features/shell/navigation.test.ts src/config/brand.test.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.0",

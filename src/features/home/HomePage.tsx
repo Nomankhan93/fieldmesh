@@ -1,9 +1,18 @@
 import { Link } from '@tanstack/react-router'
-import { useEffect, useState } from 'react'
+import { useLiveQuery } from 'dexie-react-hooks'
+import { useEffect, useMemo, useState } from 'react'
 import { APP_BRAND } from '../../config/brand'
+import { sortWorkspaceConversations } from '../../core/workspace/model'
+import { db, type CloudMessageRecord } from '../../offline/db'
 import { AuthPanel } from '../auth/AuthPanel'
 import { useAuth } from '../auth/AuthProvider'
+import { MessengerAvatar } from '../messaging/MessengerAvatar'
 import { describeConnection } from '../network/networkStatus'
+
+function formatTime(value: number | undefined) {
+  if (!value) return ''
+  return new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' }).format(new Date(value))
+}
 
 export function HomePage() {
   const { configured, loading, session } = useAuth()
@@ -30,88 +39,145 @@ export function HomePage() {
       ) : loading ? (
         <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-500">Checking session…</div>
       ) : session ? (
-        <SignedInHome online={online} email={session.user.email ?? 'ConnectX user'} />
+        <SignedInHome online={online} localUserId={session.user.id} displayName={(session.user.user_metadata?.display_name as string | undefined) ?? session.user.email?.split('@')[0] ?? 'there'} />
       ) : (
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_420px] lg:items-center lg:gap-10">
-          <section className="overflow-hidden rounded-[2rem] border border-blue-500/20 bg-[#030a30] p-5 shadow-[0_24px_80px_rgba(30,64,175,0.18)] sm:p-7 lg:p-8">
-            <img
-              src={APP_BRAND.logo}
-              alt="ConnectX — Stay Connected. Anywhere."
-              className="mx-auto w-full max-w-2xl rounded-2xl"
-            />
-            <div className="mx-auto mt-5 max-w-2xl border-t border-cyan-300/15 pt-5 text-center text-sm leading-6 text-blue-100/85 sm:text-base">
-              Resilient messaging designed to keep conversations available across Internet, offline queues, and future radio and gateway paths.
-            </div>
-          </section>
-          <div>
-            <div className="mb-4 lg:hidden">
-              <p className="text-sm font-bold uppercase tracking-[0.18em] text-blue-700">{APP_BRAND.name}</p>
-              <p className="mt-1 text-sm text-slate-500">{APP_BRAND.tagline}</p>
-            </div>
-            <AuthPanel />
-          </div>
-        </div>
+        <SignedOutHome />
       )}
     </main>
   )
 }
 
-function SignedInHome({ online, email }: { online: boolean; email: string }) {
+function SignedOutHome() {
+  return (
+    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_420px] lg:items-center lg:gap-10">
+      <section className="hidden overflow-hidden rounded-[2rem] border border-blue-500/20 bg-[#030a30] p-7 shadow-[0_24px_80px_rgba(30,64,175,0.18)] lg:block lg:p-8">
+        <img src={APP_BRAND.logo} alt="ConnectX — Stay Connected. Anywhere." className="mx-auto w-full max-w-2xl rounded-2xl" />
+        <div className="mx-auto mt-5 max-w-2xl border-t border-cyan-300/15 pt-5 text-center text-base leading-6 text-blue-100/85">
+          Stay connected when normal connectivity cannot.
+        </div>
+      </section>
+      <div>
+        <div className="mb-4 lg:hidden">
+          <p className="text-2xl font-bold tracking-tight text-slate-950">{APP_BRAND.tagline}</p>
+          <p className="mt-1 text-sm leading-5 text-slate-500">Messaging built for Internet, offline queues and resilient networks.</p>
+        </div>
+        <AuthPanel />
+        <p className="mt-4 text-center text-xs leading-5 text-slate-400 lg:hidden">Offline-first messaging · installable PWA · resilient delivery foundation</p>
+      </div>
+    </div>
+  )
+}
+
+function SignedInHome({ online, localUserId, displayName }: { online: boolean; localUserId: string; displayName: string }) {
   const connection = describeConnection({ internet: online, radio: false, gateway: false })
 
   return (
     <>
-      <header>
-        <div className="flex items-center gap-3">
-          <img src={APP_BRAND.icon} alt="" className="h-11 w-11 rounded-xl shadow-sm" />
-          <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.16em] text-blue-700">{APP_BRAND.name}</p>
-            <p className="text-xs font-medium text-slate-500">{APP_BRAND.tagline}</p>
-          </div>
-        </div>
-        <h1 className="mt-4 text-2xl font-bold tracking-tight sm:text-3xl">Communication, simplified.</h1>
+      <header className="hidden lg:block">
+        <p className="text-sm font-semibold uppercase tracking-[0.16em] text-blue-700">{APP_BRAND.name}</p>
+        <h1 className="mt-1 text-3xl font-bold tracking-tight">Communication, simplified.</h1>
         <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">Chat, share location, send an SOS and see whether ConnectX has a communication path available.</p>
       </header>
 
-      <section className="mt-5 grid gap-3 sm:mt-6 sm:gap-4 md:grid-cols-3">
-        <QuickAction title="Chats" detail="Open direct and group conversations and send messages." to="/messages" primary />
-        <QuickAction title="SOS & location" detail="Create an emergency alert or share a location fix." to="/sos" danger />
-        <QuickAction title="Network" detail="See whether Internet is available and what fallback capability exists." to="/network" />
-      </section>
-
-      <section className="mt-5 grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
-        <article className={`rounded-2xl border p-5 ${online ? 'border-emerald-200 bg-emerald-50' : 'border-amber-200 bg-amber-50'}`}>
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-500">Current connection</p>
-              <h2 className="mt-1 text-xl font-bold">{connection.title}</h2>
+      <section className="lg:mt-6">
+        <div className="mb-4 lg:hidden">
+          <p className="text-xs font-bold uppercase tracking-[0.16em] text-blue-700">Welcome</p>
+          <h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-950">Hi, {displayName}</h1>
+        </div>
+        <article className={`rounded-2xl border px-4 py-3.5 ${online ? 'border-emerald-200 bg-emerald-50' : 'border-amber-200 bg-amber-50'}`}>
+          <div className="flex items-center gap-3">
+            <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl ${online ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}><span className={`h-2.5 w-2.5 rounded-full ${online ? 'bg-emerald-500' : 'bg-amber-500'}`} /></span>
+            <div className="min-w-0 flex-1">
+              <h2 className="text-sm font-bold text-slate-950">{connection.title}</h2>
+              <p className="mt-0.5 text-xs leading-5 text-slate-600">{connection.detail}</p>
             </div>
-            <span className={`rounded-full px-3 py-1 text-xs font-bold ${online ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-900'}`}>{connection.canCommunicate ? 'Ready' : 'Waiting'}</span>
+            <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${online ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-900'}`}>{connection.canCommunicate ? 'Ready' : 'Waiting'}</span>
           </div>
-          <p className="mt-3 text-sm leading-6 text-slate-700">{connection.detail}</p>
-        </article>
-
-        <article className="rounded-2xl border border-slate-200 bg-white p-5">
-          <p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-500">Signed in as</p>
-          <p className="mt-2 truncate font-semibold">{email}</p>
-          <Link to="/profile" className="mt-4 inline-block text-sm font-bold text-blue-800 underline decoration-blue-200 underline-offset-4">Profile & devices</Link>
         </article>
       </section>
+
+      <section className="mt-5">
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-base font-bold text-slate-950">Quick actions</h2>
+        </div>
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <QuickAction title="Chats" detail="Messages" to="/messages" accent="blue" symbol="▣" />
+          <QuickAction title="SOS" detail="Emergency" to="/sos" accent="rose" symbol="!" />
+          <QuickAction title="Location" detail="Share GPS" to="/sos" accent="violet" symbol="◎" />
+          <QuickAction title="Network" detail="Connection" to="/network" accent="cyan" symbol="⌁" />
+        </div>
+      </section>
+
+      <RecentChats localUserId={localUserId} />
     </>
   )
 }
 
-function QuickAction({ title, detail, to, primary = false, danger = false }: { title: string; detail: string; to: '/messages' | '/sos' | '/network'; primary?: boolean; danger?: boolean }) {
-  const classes = primary
-    ? 'border-blue-700 bg-gradient-to-br from-cyan-500 via-blue-600 to-violet-700 text-white shadow-blue-950/10'
-    : danger
-      ? 'border-rose-200 bg-rose-50 text-rose-950'
-      : 'border-slate-200 bg-white text-slate-950'
+function RecentChats({ localUserId }: { localUserId: string }) {
+  const conversations = useLiveQuery(
+    async () => sortWorkspaceConversations(await db.workspaceConversations.where('localUserId').equals(localUserId).toArray()),
+    [localUserId],
+    [],
+  )
+  const participants = useLiveQuery(
+    async () => db.workspaceParticipants.where('localUserId').equals(localUserId).toArray(),
+    [localUserId],
+    [],
+  )
+  const messages = useLiveQuery<CloudMessageRecord[], CloudMessageRecord[]>(
+    async () => db.cloudMessages.where('localUserId').equals(localUserId).toArray(),
+    [localUserId],
+    [],
+  )
+
+  const recent = useMemo(() => conversations.slice(0, 3).map((conversation) => {
+    const members = participants.filter((item) => item.conversationId === conversation.id)
+    const other = members.find((item) => item.user_id !== localUserId)
+    const title = conversation.title || (conversation.kind === 'group' ? 'Group conversation' : other?.display_name || 'Direct conversation')
+    const latest = messages
+      .filter((message) => message.conversationId === conversation.id)
+      .sort((a, b) => b.createdAt - a.createdAt)[0]
+    return { conversation, title, latest }
+  }), [conversations, localUserId, messages, participants])
+
   return (
-    <Link to={to} className={`rounded-2xl border p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ${classes}`}>
-      <h2 className="text-xl font-bold">{title}</h2>
-      <p className={`mt-2 text-sm leading-6 ${primary ? 'text-blue-50' : danger ? 'text-rose-800' : 'text-slate-600'}`}>{detail}</p>
-      <span className="mt-4 inline-block text-sm font-bold">Open →</span>
+    <section className="mt-5 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
+        <h2 className="text-base font-bold text-slate-950">Recent chats</h2>
+        <Link to="/messages" className="text-xs font-bold text-blue-700">See all</Link>
+      </div>
+      {recent.length === 0 ? (
+        <div className="px-4 py-6 text-center">
+          <p className="text-sm font-semibold text-slate-700">No conversations yet</p>
+          <Link to="/messages" className="mt-2 inline-block text-xs font-bold text-blue-700">Start a chat</Link>
+        </div>
+      ) : (
+        <div className="divide-y divide-slate-100">
+          {recent.map(({ conversation, title, latest }) => (
+            <Link key={conversation.id} to="/messages" className="flex items-center gap-3 px-4 py-3 hover:bg-slate-50">
+              <MessengerAvatar label={title} group={conversation.kind === 'group'} size="sm" />
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-bold text-slate-900">{title}</p>
+                <p className="mt-0.5 truncate text-xs text-slate-500">{latest ? `${latest.senderId === localUserId ? 'You: ' : ''}${latest.body}` : 'No messages yet'}</p>
+              </div>
+              <span className="shrink-0 text-[11px] text-slate-400">{formatTime(latest?.createdAt)}</span>
+            </Link>
+          ))}
+        </div>
+      )}
+    </section>
+  )
+}
+
+function QuickAction({ title, detail, to, accent, symbol }: { title: string; detail: string; to: '/messages' | '/sos' | '/network'; accent: 'blue' | 'rose' | 'violet' | 'cyan'; symbol: string }) {
+  const tone = accent === 'rose' ? 'bg-rose-50 text-rose-700' : accent === 'violet' ? 'bg-violet-50 text-violet-700' : accent === 'cyan' ? 'bg-cyan-50 text-cyan-700' : 'bg-blue-50 text-blue-700'
+  return (
+    <Link to={to} className="connectx-touch flex min-h-[94px] flex-col justify-between rounded-2xl border border-slate-200 bg-white p-3.5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+      <span className={`flex h-9 w-9 items-center justify-center rounded-xl text-lg font-black ${tone}`}>{symbol}</span>
+      <span>
+        <span className="block text-sm font-bold text-slate-950">{title}</span>
+        <span className="mt-0.5 block text-xs text-slate-500">{detail}</span>
+      </span>
     </Link>
   )
 }

@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react'
-import { Link } from '@tanstack/react-router'
+import { useEffect, useMemo, useState } from 'react'
+import { SectionHeader, StatusRow } from '../mobile/CompactUi'
+import { connectionRows } from '../mobile/informationHierarchy'
 import { describeConnection } from './networkStatus'
 
 export function NetworkStatusPage() {
@@ -16,64 +17,38 @@ export function NetworkStatusPage() {
     }
   }, [])
 
-  // Real Bluetooth/LoRa status is intentionally false until hardware integration.
   const radioConnected = false
   const gatewayReachable = false
-  const summary = describeConnection({
-    internet: online,
-    radio: radioConnected,
-    gateway: gatewayReachable,
-  })
+  const summary = describeConnection({ internet: online, radio: radioConnected, gateway: gatewayReachable })
+  const rows = useMemo(() => connectionRows({ internet: online, radio: radioConnected, gateway: gatewayReachable }), [gatewayReachable, online, radioConnected])
 
   return (
-    <main className="mx-auto max-w-5xl p-4 sm:p-6 lg:p-8">
-      <header>
-        <p className="text-sm font-semibold uppercase tracking-[0.16em] text-slate-500">Network</p>
-        <h1 className="mt-1 text-2xl font-bold tracking-tight sm:text-3xl">Connection status</h1>
-        <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">A simple view of which communication paths are available right now.</p>
-      </header>
+    <main className="mx-auto max-w-4xl p-4 sm:p-6 lg:p-8">
+      <SectionHeader eyebrow="Network" title="Connection status" detail="See which communication paths are available right now." compact />
 
-      <section className="mt-5 grid gap-3 sm:mt-6 sm:gap-4 md:grid-cols-3">
-        <StatusCard label="Internet" status={online ? 'Connected' : 'Offline'} detail={online ? 'Chats can synchronize now.' : 'Internet messages will wait locally.'} tone={online ? 'good' : 'warn'} />
-        <StatusCard label="Radio" status="Not connected" detail="No physical Bluetooth/LoRa radio is paired with this browser yet." tone="neutral" />
-        <StatusCard label="Gateway" status="Not available" detail="A live radio-to-Internet gateway will appear here after real radio integration." tone="neutral" />
-      </section>
-
-      <section className={`mt-5 rounded-2xl border p-4 sm:p-5 ${summary.canCommunicate ? 'border-emerald-200 bg-emerald-50' : 'border-amber-200 bg-amber-50'}`}>
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="font-bold">{summary.title}</h2>
-          <span className={`rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wide ${summary.canCommunicate ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-900'}`}>{summary.mode}</span>
+      <section className={`rounded-2xl border px-4 py-3.5 lg:mt-6 ${summary.canCommunicate ? 'border-emerald-200 bg-emerald-50' : 'border-amber-200 bg-amber-50'}`}>
+        <div className="flex items-center gap-3">
+          <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl ${summary.canCommunicate ? 'bg-emerald-100' : 'bg-amber-100'}`}><span className={`h-2.5 w-2.5 rounded-full ${summary.canCommunicate ? 'bg-emerald-500' : 'bg-amber-500'}`} /></span>
+          <div className="min-w-0 flex-1">
+            <h2 className="text-sm font-bold text-slate-950">{summary.title}</h2>
+            <p className="mt-0.5 text-xs leading-5 text-slate-600">{summary.detail}</p>
+          </div>
+          <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold uppercase ${summary.canCommunicate ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-900'}`}>{summary.mode}</span>
         </div>
-        <p className="mt-2 text-sm leading-6 text-slate-700">{summary.detail}</p>
       </section>
 
-      <details className="mt-5 rounded-2xl border border-slate-200 bg-white p-5">
-        <summary className="cursor-pointer text-sm font-bold text-slate-700">Advanced network details</summary>
-        <div className="mt-3 space-y-2 text-xs leading-5 text-slate-500">
-          <p>Mesh and gateway behavior is already validated in the software labs, but this browser is not claiming a physical RF connection.</p>
-          <p>When compatible hardware is integrated, these same status inputs can describe Internet-only, local-radio and hybrid gateway communication without exposing packet-level diagnostics to normal users.</p>
+      <section className="mt-4 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm divide-y divide-slate-100">
+        {rows.map((row) => <StatusRow key={row.id} label={row.label} value={row.value} detail={row.detail} tone={row.tone} />)}
+      </section>
+
+      <details className="mt-4 rounded-2xl border border-slate-200 bg-white px-4 py-3.5">
+        <summary className="cursor-pointer text-sm font-bold text-slate-800">Connection details</summary>
+        <div className="mt-3 grid gap-3 text-xs leading-5 text-slate-500 sm:grid-cols-3">
+          <div><p className="font-bold text-slate-700">Internet</p><p>Uses the browser connection for cloud synchronization.</p></div>
+          <div><p className="font-bold text-slate-700">Radio</p><p>No compatible physical radio is paired on this device yet.</p></div>
+          <div><p className="font-bold text-slate-700">Gateway</p><p>Hybrid gateway availability will appear after compatible radio integration.</p></div>
         </div>
       </details>
-
-      <div className="mt-6 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:gap-3">
-        <Link to="/messages" className="connectx-touch flex items-center justify-center rounded-xl bg-slate-950 px-4 text-sm font-bold text-white">Open chats</Link>
-        <Link to="/sos" className="connectx-touch flex items-center justify-center rounded-xl border border-rose-300 bg-rose-50 px-4 text-sm font-bold text-rose-800">SOS & location</Link>
-      </div>
     </main>
-  )
-}
-
-function StatusCard({ label, status, detail, tone }: { label: string; status: string; detail: string; tone: 'good' | 'warn' | 'neutral' }) {
-  const badge = tone === 'good'
-    ? 'bg-emerald-100 text-emerald-800'
-    : tone === 'warn'
-      ? 'bg-amber-100 text-amber-900'
-      : 'bg-slate-100 text-slate-700'
-  return (
-    <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm shadow-slate-100 sm:p-5">
-      <p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-500">{label}</p>
-      <span className={`mt-3 inline-flex rounded-full px-3 py-1 text-sm font-bold ${badge}`}>{status}</span>
-      <p className="mt-3 text-sm leading-6 text-slate-600">{detail}</p>
-    </article>
   )
 }

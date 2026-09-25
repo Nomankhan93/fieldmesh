@@ -136,7 +136,7 @@ export function AppShell() {
         <header className="border-b border-blue-100 bg-white/95 backdrop-blur" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
           <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
             <Link to="/" aria-label="ConnectX home"><BrandIdentity /></Link>
-            <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">v{APP_BRAND.version}</span>
+            <span className="hidden rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700 sm:inline-flex">v{APP_BRAND.version}</span>
           </div>
         </header>
         <Outlet />
@@ -147,7 +147,7 @@ export function AppShell() {
   const navItems = developer && developerMode ? DEVELOPER_NAV_ITEMS : USER_NAV_ITEMS
   const canRenderDeveloper = !developer || developerMode
   const mobileScreen = navItems.find((item) => isNavItemActive(pathname, item.to))
-  const mobileTitle = mobileScreen?.label ?? (developer ? 'Developer tools' : APP_BRAND.name)
+  const mobileTitle = pathname === '/' && !developer ? APP_BRAND.name : mobileScreen?.label ?? (developer ? 'Developer tools' : APP_BRAND.name)
 
   return (
     <div className="min-h-screen bg-[#f7f9ff] text-slate-950">
@@ -156,10 +156,7 @@ export function AppShell() {
         <div className="flex min-h-14 items-center justify-between gap-3 px-4 py-2">
           <Link to={developer && developerMode ? '/developer' : '/'} aria-label="ConnectX home" className="flex min-w-0 items-center gap-2.5">
             <img src={APP_BRAND.icon} alt="" className="h-9 w-9 shrink-0 rounded-xl shadow-sm" />
-            <span className="min-w-0">
-              <span className="block truncate text-sm font-bold text-slate-950">{mobileTitle}</span>
-              <span className="block truncate text-[10px] font-semibold text-slate-400">{developer && developerMode ? 'Engineering preview' : APP_BRAND.tagline}</span>
-            </span>
+            <span className="block truncate text-[15px] font-bold text-slate-950">{mobileTitle}</span>
           </Link>
           {developer && developerMode ? (
             <Link to="/" className="connectx-touch flex items-center rounded-full bg-amber-100 px-3 text-xs font-bold text-amber-900">Exit tools</Link>

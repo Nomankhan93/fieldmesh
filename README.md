@@ -1,4 +1,8 @@
-# ConnectX 0.8.1.4 — Familiar Messenger UI & Mobile Chat Experience
+# ConnectX 0.8.1.5 — Mobile UX Consolidation & Information Hierarchy
+
+0.8.1.5 consolidates the mobile product experience without changing messaging, delivery, offline workspace, Supabase authorization, crypto, mesh or gateway logic. Internal screens use a compact app header, Home becomes a connection-first dashboard with compact quick actions and recent chats, Auth moves the form above the fold on phones, Network becomes a condensed status list, Profile separates account/ConnectX ID/devices/app status, and SOS prioritizes the emergency action with a compact prototype warning and simplified location controls.
+
+## ConnectX 0.8.1.4 — Familiar Messenger UI & Mobile Chat Experience
 
 ConnectX is the user-facing brand for the resilient messaging platform. The validated internal protocol and database identifiers continue to use the FieldMesh name for backward compatibility. The platform is designed around three eventual communication paths:
 

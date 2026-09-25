@@ -4,6 +4,8 @@ import { buildContactDeepLink, buildContactShareText, formatFieldMeshCode } from
 import { readDeveloperMode, subscribeDeveloperMode, writeDeveloperMode } from '../shell/developerMode'
 import { supabase } from '../../lib/supabase'
 import { PwaSettingsCard } from '../pwa/PwaSettingsCard'
+import { APP_BRAND } from '../../config/brand'
+import { SectionHeader } from '../mobile/CompactUi'
 
 type Profile = {
   id: string
@@ -171,114 +173,109 @@ export function IdentityDashboard() {
     setNotice(enabled ? 'Developer tools enabled.' : 'Developer tools hidden from the user app.')
   }
 
-  return (
-    <main className="mx-auto max-w-5xl p-4 sm:p-6 lg:p-8">
-      <header>
-        <p className="text-sm font-semibold uppercase tracking-[0.16em] text-slate-500">Profile</p>
-        <h1 className="mt-1 text-2xl font-bold tracking-tight sm:text-3xl">Profile & devices</h1>
-        <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">Manage your account, share your ConnectX contact code and prepare compatible radio devices.</p>
-      </header>
+  const initials = (profile?.display_name || authenticatedEmail || 'CX')
+    .split(/\s+/u)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join('') || 'CX'
 
-      <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-500">Signed in</p>
-            <h2 className="mt-1 text-2xl font-bold">{profile?.display_name ?? 'ConnectX user'}</h2>
-            <p className="mt-1 text-sm text-slate-500">{authenticatedEmail}</p>
-          </div>
-          <div className="w-full rounded-xl border border-slate-200 bg-slate-50 p-4 sm:w-auto sm:min-w-[220px]">
-            <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Your ConnectX code</p>
-            <p className="mt-1 font-mono text-lg font-bold tracking-wide text-slate-900">{contactCode}</p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              <button type="button" disabled={!profile} onClick={() => void copyContactCode()} className="connectx-touch rounded-lg border border-slate-300 bg-white px-3 text-xs font-bold disabled:opacity-50">Copy code</button>
-              <button type="button" disabled={!profile} onClick={() => void shareContact()} className="connectx-touch rounded-lg bg-slate-950 px-3 text-xs font-bold text-white disabled:opacity-50">Share contact</button>
-            </div>
+  return (
+    <main className="mx-auto max-w-4xl p-4 sm:p-6 lg:p-8">
+      <SectionHeader eyebrow="Profile" title="Profile & devices" detail="Manage your account, ConnectX ID, devices and app settings." compact />
+
+      <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm lg:mt-6 sm:p-5">
+        <div className="flex items-center gap-3">
+          <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-cyan-500 via-blue-600 to-violet-700 text-sm font-black tracking-wide text-white shadow-sm">{initials}</span>
+          <div className="min-w-0 flex-1">
+            <h2 className="truncate text-xl font-bold text-slate-950">{profile?.display_name ?? 'ConnectX user'}</h2>
+            <p className="mt-0.5 truncate text-sm text-slate-500">{authenticatedEmail}</p>
           </div>
         </div>
 
-        <form className="mt-5" onSubmit={saveProfile}>
-          <label className="text-sm font-semibold text-slate-700">
-            Display name
-            <div className="mt-2 flex flex-col gap-2 sm:flex-row">
-              <input className="min-w-0 flex-1 rounded-xl border border-slate-300 px-3 py-2.5" value={displayName} onChange={(event) => setDisplayName(event.target.value)} maxLength={80} />
-              <button className="rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50" disabled={busy}>Save</button>
-            </div>
-          </label>
+        <form className="mt-4" onSubmit={saveProfile}>
+          <label className="text-xs font-bold uppercase tracking-[0.1em] text-slate-500">Display name</label>
+          <div className="mt-2 flex gap-2">
+            <input className="connectx-input min-w-0 flex-1 rounded-xl border border-slate-300 px-3 py-2.5" value={displayName} onChange={(event) => setDisplayName(event.target.value)} maxLength={80} />
+            <button className="connectx-touch rounded-xl bg-slate-950 px-4 text-sm font-bold text-white disabled:opacity-50" disabled={busy || !displayName.trim()}>Save</button>
+          </div>
         </form>
+      </section>
 
-        {profile ? (
-          <details className="mt-5 rounded-xl border border-slate-200 bg-slate-50 p-4">
-            <summary className="cursor-pointer text-sm font-bold text-slate-700">Contact & identity details</summary>
-            <div className="mt-3 space-y-3">
-              <div>
-                <p className="text-xs font-bold uppercase tracking-wide text-slate-500">QR-ready contact payload</p>
-                <p className="mt-1 break-all font-mono text-xs text-slate-700">{buildContactDeepLink(profile.fieldmesh_user_id)}</p>
-                <p className="mt-1 text-xs leading-5 text-slate-500">Camera QR scanning is not enabled yet. This payload contract is ready for the mobile scanner phase.</p>
-              </div>
-              <div>
-                <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Technical identity ID</p>
-                <p className="mt-1 break-all font-mono text-xs text-slate-700">{profile.fieldmesh_user_id}</p>
-              </div>
+      <section className="mt-4 rounded-2xl border border-blue-100 bg-white p-4 shadow-sm sm:p-5">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-xs font-bold uppercase tracking-[0.12em] text-blue-600">Your ConnectX ID</p>
+            <p className="mt-1 break-all font-mono text-lg font-bold tracking-wide text-slate-950">{contactCode}</p>
+            <p className="mt-1 text-xs leading-5 text-slate-500">Share this ID so another ConnectX user can start a conversation with you.</p>
+          </div>
+          <div className="flex w-full gap-2 sm:w-auto">
+            <button type="button" disabled={!profile} onClick={() => void copyContactCode()} className="connectx-touch flex-1 rounded-xl border border-slate-300 bg-white px-3 text-sm font-bold disabled:opacity-50 sm:flex-none">Copy</button>
+            <button type="button" disabled={!profile} onClick={() => void shareContact()} className="connectx-touch flex-1 rounded-xl bg-gradient-to-r from-cyan-500 via-blue-600 to-violet-700 px-3 text-sm font-bold text-white disabled:opacity-50 sm:flex-none">Share</button>
+          </div>
+        </div>
+
+        {developerMode && profile ? (
+          <details className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3">
+            <summary className="cursor-pointer text-xs font-bold text-amber-900">Developer identity details</summary>
+            <div className="mt-3 space-y-3 text-xs">
+              <div><p className="font-bold uppercase tracking-wide text-amber-800">Contact payload</p><p className="mt-1 break-all font-mono text-amber-950">{buildContactDeepLink(profile.fieldmesh_user_id)}</p></div>
+              <div><p className="font-bold uppercase tracking-wide text-amber-800">Technical identity ID</p><p className="mt-1 break-all font-mono text-amber-950">{profile.fieldmesh_user_id}</p></div>
             </div>
           </details>
         ) : null}
       </section>
 
-      <section className="mt-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <div className="flex flex-wrap items-center justify-between gap-3">
+      <section className="mt-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+        <div className="flex items-center justify-between gap-3">
           <div>
-            <h2 className="text-xl font-bold">My devices</h2>
-            <p className="mt-1 text-sm text-slate-500">Add and manage ConnectX radio devices. Bluetooth/LoRa pairing will be enabled in the hardware-integration phase.</p>
+            <h2 className="text-lg font-bold text-slate-950">My devices</h2>
+            <p className="mt-0.5 text-xs leading-5 text-slate-500">Compatible ConnectX radio devices will appear here.</p>
           </div>
-          <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700">{devices.filter((item) => item.status === 'active').length} active</span>
+          <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-bold text-slate-700">{devices.filter((item) => item.status === 'active').length} active</span>
         </div>
 
         <form className="mt-4 flex flex-col gap-2 sm:flex-row" onSubmit={addDevice}>
-          <input className="min-w-0 flex-1 rounded-xl border border-slate-300 px-3 py-2.5" placeholder="e.g. Field radio 01" value={deviceLabel} onChange={(event) => setDeviceLabel(event.target.value)} maxLength={80} />
-          <button className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-bold disabled:opacity-50" disabled={busy || !deviceLabel.trim()}>Add device</button>
+          <input className="connectx-input min-w-0 flex-1 rounded-xl border border-slate-300 px-3 py-2.5" placeholder="Device name" value={deviceLabel} onChange={(event) => setDeviceLabel(event.target.value)} maxLength={80} />
+          <button className="connectx-touch rounded-xl border border-slate-300 bg-white px-4 text-sm font-bold disabled:opacity-50" disabled={busy || !deviceLabel.trim()}>Add device</button>
         </form>
 
-        <div className="mt-4 space-y-3">
+        <div className="mt-3 space-y-2">
           {devices.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-slate-300 p-5 text-sm text-slate-500">No ConnectX radio devices added yet.</div>
+            <div className="rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-500">No radio devices added yet.</div>
           ) : devices.map((device) => (
-            <article key={device.id} className="flex flex-col gap-3 rounded-xl border border-slate-200 p-4 sm:flex-row sm:items-center sm:justify-between">
-              <div className="min-w-0">
-                <div className="flex flex-wrap items-center gap-2">
-                  <h3 className="font-bold">{device.label}</h3>
-                  <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold uppercase ${device.status === 'active' ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'}`}>{device.status}</span>
-                </div>
-                <p className="mt-1 text-xs text-slate-500">Radio pairing not connected yet</p>
-                <details className="mt-2">
-                  <summary className="cursor-pointer text-xs font-semibold text-slate-500">Technical device ID</summary>
-                  <p className="mt-1 break-all font-mono text-[11px] text-slate-500">{device.fieldmesh_device_id}</p>
-                </details>
+            <article key={device.id} className="flex items-center gap-3 rounded-xl border border-slate-200 p-3">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-sm font-black text-blue-700">R</span>
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2"><h3 className="truncate text-sm font-bold">{device.label}</h3><span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${device.status === 'active' ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'}`}>{device.status}</span></div>
+                <p className="mt-0.5 text-xs text-slate-500">Radio pairing not connected yet</p>
+                {developerMode ? <p className="mt-1 break-all font-mono text-[10px] text-slate-400">{device.fieldmesh_device_id}</p> : null}
               </div>
-              {device.status === 'active' ? <button type="button" disabled={busy} onClick={() => void revokeDevice(device)} className="rounded-xl border border-rose-200 px-3 py-2 text-sm font-bold text-rose-700 disabled:opacity-50">Revoke</button> : null}
+              {device.status === 'active' ? <button type="button" disabled={busy} onClick={() => void revokeDevice(device)} className="connectx-touch rounded-xl px-3 text-xs font-bold text-rose-700 disabled:opacity-50">Revoke</button> : null}
             </article>
           ))}
         </div>
       </section>
 
-      <PwaSettingsCard />
+      <PwaSettingsCard showTechnical={developerMode} />
 
-      <details className="mt-5 rounded-2xl border border-slate-200 bg-white p-5">
-        <summary className="cursor-pointer font-bold text-slate-800">Advanced app settings</summary>
-        <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="text-sm font-bold">Developer mode</p>
-            <p className="mt-1 max-w-xl text-xs leading-5 text-slate-500">Shows Mesh Lab, Gateway Lab and protocol diagnostics. Keep this off for normal ConnectX use.</p>
+      <details className="mt-4 rounded-2xl border border-slate-200 bg-white px-4 py-3.5">
+        <summary className="cursor-pointer text-sm font-bold text-slate-800">About & advanced</summary>
+        <div className="mt-4 border-t border-slate-100 pt-4">
+          <div className="flex items-center justify-between gap-3">
+            <div><p className="text-sm font-bold">ConnectX version</p><p className="mt-0.5 text-xs text-slate-500">User-facing build</p></div>
+            <span className="text-xs font-bold text-slate-500">v{APP_BRAND.version}</span>
           </div>
-          <label className="inline-flex items-center gap-2 text-sm font-semibold text-slate-700">
-            <input type="checkbox" checked={developerMode} onChange={(event) => setDeveloperMode(event.target.checked)} className="h-5 w-5" />
-            {developerMode ? 'Enabled' : 'Off'}
-          </label>
+          <div className="mt-4 flex items-center justify-between gap-3 border-t border-slate-100 pt-4">
+            <div><p className="text-sm font-bold">Developer mode</p><p className="mt-0.5 text-xs leading-5 text-slate-500">Shows engineering diagnostics and protocol tools.</p></div>
+            <label className="inline-flex items-center gap-2 text-sm font-semibold text-slate-700"><input type="checkbox" checked={developerMode} onChange={(event) => setDeveloperMode(event.target.checked)} className="h-5 w-5" />{developerMode ? 'On' : 'Off'}</label>
+          </div>
         </div>
       </details>
 
-      <section className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-5">
-        <p aria-live="polite" className="text-sm text-slate-600">{notice}</p>
-        <button type="button" disabled={busy} onClick={() => void signOut()} className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-bold">Sign out</button>
+      <section className="mt-4 rounded-2xl border border-slate-200 bg-white p-4">
+        {notice && notice !== 'Profile ready.' ? <p aria-live="polite" className="mb-3 text-xs leading-5 text-slate-500">{notice}</p> : null}
+        <button type="button" disabled={busy} onClick={() => void signOut()} className="connectx-touch w-full rounded-xl border border-rose-200 bg-rose-50 px-4 text-sm font-bold text-rose-700 disabled:opacity-50">Sign out</button>
       </section>
     </main>
   )
