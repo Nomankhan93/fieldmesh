@@ -18,6 +18,7 @@ export function GroupManagementPanel({
   participants,
   localUserId,
   service,
+  online,
   onChanged,
   onLeft,
   setNotice,
@@ -26,6 +27,7 @@ export function GroupManagementPanel({
   participants: ConversationParticipant[]
   localUserId: string
   service: InternetMessagingService
+  online: boolean
   onChanged: () => Promise<void>
   onLeft: () => void
   setNotice: (value: string) => void
@@ -42,6 +44,10 @@ export function GroupManagementPanel({
   )
 
   async function run(action: () => Promise<void>, success: string) {
+    if (!online) {
+      setNotice('Group membership and permission changes require Internet. Cached group details remain available offline.')
+      return
+    }
     setBusy(true)
     try {
       await action()
@@ -75,17 +81,21 @@ export function GroupManagementPanel({
         <span className="rounded-full bg-white px-3 py-1 text-xs font-bold capitalize text-slate-700">{role}</span>
       </div>
 
+      {!online ? (
+        <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-900">Offline view: cached members and roles are available, but group changes require Internet.</div>
+      ) : null}
+
       {canRenameGroup(role) ? (
         <div className="mt-4 flex gap-2">
           <input value={title} onChange={(event) => setTitle(event.target.value)} className="min-w-0 flex-1 rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm" aria-label="Group name" />
-          <button type="button" disabled={busy || !title.trim() || title.trim() === conversation.title} onClick={() => void run(() => service.renameGroup(conversation.id, title), 'Group name updated.')} className="rounded-xl bg-slate-950 px-4 py-2 text-sm font-bold text-white disabled:opacity-40">Rename</button>
+          <button type="button" disabled={busy || !online || !title.trim() || title.trim() === conversation.title} onClick={() => void run(() => service.renameGroup(conversation.id, title), 'Group name updated.')} className="rounded-xl bg-slate-950 px-4 py-2 text-sm font-bold text-white disabled:opacity-40">Rename</button>
         </div>
       ) : null}
 
       {canManage ? (
         <form onSubmit={addMember} className="mt-3 flex gap-2">
           <input value={memberContact} onChange={(event) => setMemberContact(event.target.value)} placeholder="FM-12AB34CD56EF" className="min-w-0 flex-1 rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm uppercase placeholder:normal-case" />
-          <button disabled={busy || !memberContact.trim()} className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-700 disabled:opacity-40">Add member</button>
+          <button disabled={busy || !online || !memberContact.trim()} className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-700 disabled:opacity-40">Add member</button>
         </form>
       ) : null}
 
@@ -102,12 +112,12 @@ export function GroupManagementPanel({
               {!isMe ? (
                 <div className="flex flex-wrap gap-2">
                   {canChangeGroupAdmins(role) && participantRole !== 'owner' ? (
-                    <button type="button" disabled={busy} onClick={() => void run(() => service.setGroupAdmin(conversation.id, participant.user_id, participantRole !== 'admin'), participantRole === 'admin' ? 'Admin permission removed.' : 'Admin permission granted.')} className="rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs font-bold text-slate-700">
+                    <button type="button" disabled={busy || !online} onClick={() => void run(() => service.setGroupAdmin(conversation.id, participant.user_id, participantRole !== 'admin'), participantRole === 'admin' ? 'Admin permission removed.' : 'Admin permission granted.')} className="rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs font-bold text-slate-700">
                       {participantRole === 'admin' ? 'Make member' : 'Make admin'}
                     </button>
                   ) : null}
                   {canRemoveGroupMember(role, participantRole) ? (
-                    <button type="button" disabled={busy} onClick={() => void run(() => service.removeGroupMember(conversation.id, participant.user_id), 'Group member removed.')} className="rounded-lg border border-rose-200 px-2.5 py-1.5 text-xs font-bold text-rose-700">Remove</button>
+                    <button type="button" disabled={busy || !online} onClick={() => void run(() => service.removeGroupMember(conversation.id, participant.user_id), 'Group member removed.')} className="rounded-lg border border-rose-200 px-2.5 py-1.5 text-xs font-bold text-rose-700">Remove</button>
                   ) : null}
                 </div>
               ) : null}
@@ -117,7 +127,7 @@ export function GroupManagementPanel({
       </div>
 
       {canLeaveGroup(role) ? (
-        <button type="button" disabled={busy} onClick={() => void run(async () => { await service.leaveGroup(conversation.id); onLeft() }, 'You left the group.')} className="mt-4 text-xs font-bold text-rose-700 underline decoration-rose-200 underline-offset-4">Leave group</button>
+        <button type="button" disabled={busy || !online} onClick={() => void run(async () => { await service.leaveGroup(conversation.id, localUserId); onLeft() }, 'You left the group.')} className="mt-4 text-xs font-bold text-rose-700 underline decoration-rose-200 underline-offset-4">Leave group</button>
       ) : (
         <p className="mt-4 text-xs text-slate-500">The owner cannot leave until ownership transfer is implemented in a later patch.</p>
       )}

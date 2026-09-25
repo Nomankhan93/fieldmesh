@@ -78,7 +78,6 @@ export function IdentityDashboard() {
     )
   }
 
-  const authenticatedUserId = session.user.id
   const authenticatedEmail = session.user.email
   const contactCode = profile ? formatFieldMeshCode(profile.fieldmesh_user_id) : 'Loading…'
 
@@ -90,7 +89,7 @@ export function IdentityDashboard() {
 
     setBusy(true)
     try {
-      const { error } = await supabase.from('profiles').update({ display_name: value }).eq('id', profile.id)
+      const { error } = await supabase.rpc('fieldmesh_update_display_name', { p_display_name: value })
       if (error) throw error
       await load()
       setNotice('Profile updated.')
@@ -109,7 +108,7 @@ export function IdentityDashboard() {
 
     setBusy(true)
     try {
-      const { error } = await supabase.from('devices').insert({ owner_id: authenticatedUserId, label })
+      const { error } = await supabase.rpc('fieldmesh_create_device', { p_label: label })
       if (error) throw error
       setDeviceLabel('')
       await load()
@@ -125,10 +124,7 @@ export function IdentityDashboard() {
     if (!supabase || device.status === 'revoked') return
     setBusy(true)
     try {
-      const { error } = await supabase
-        .from('devices')
-        .update({ status: 'revoked', revoked_at: new Date().toISOString() })
-        .eq('id', device.id)
+      const { error } = await supabase.rpc('fieldmesh_revoke_device', { p_device_id: device.id })
       if (error) throw error
       await load()
       setNotice(`${device.label} revoked.`)

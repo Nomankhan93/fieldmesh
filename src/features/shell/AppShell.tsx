@@ -87,7 +87,7 @@ export function AppShell() {
         <header className="border-b border-slate-200 bg-white">
           <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6">
             <Link to="/" className="font-bold tracking-tight text-slate-950">FieldMesh</Link>
-            <span className="text-xs font-semibold text-slate-500">0.7.0</span>
+            <span className="text-xs font-semibold text-slate-500">0.8.0</span>
           </div>
         </header>
         <Outlet />
@@ -152,7 +152,7 @@ export function AppShell() {
               <span aria-hidden="true" className="text-lg leading-none">{collapsed ? '›' : '‹'}</span>
               {!collapsed ? 'Collapse sidebar' : null}
             </button>
-            {!collapsed ? <p className={`mt-3 text-center text-[11px] ${developer && developerMode ? 'text-slate-500' : 'text-slate-400'}`}>FieldMesh 0.7.0</p> : null}
+            {!collapsed ? <p className={`mt-3 text-center text-[11px] ${developer && developerMode ? 'text-slate-500' : 'text-slate-400'}`}>FieldMesh 0.8.0</p> : null}
           </div>
         </aside>
 

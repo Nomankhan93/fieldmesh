@@ -11,6 +11,8 @@ const LazyNetworkStatusPage = lazy(async () => ({ default: (await import('../fea
 const LazyIdentityDashboard = lazy(async () => ({ default: (await import('../features/identity/IdentityDashboard')).IdentityDashboard }))
 const LazyDeveloperHomePage = lazy(async () => ({ default: (await import('../features/developer/DeveloperHomePage')).DeveloperHomePage }))
 const LazySecurityFoundationPage = lazy(async () => ({ default: (await import('../features/security/SecurityFoundationPage')).SecurityFoundationPage }))
+const LazyDeliveryCoordinatorPage = lazy(async () => ({ default: (await import('../features/delivery/DeliveryCoordinatorPage')).DeliveryCoordinatorPage }))
+const LazyOfflineWorkspacePage = lazy(async () => ({ default: (await import('../features/workspace/OfflineWorkspacePage')).OfflineWorkspacePage }))
 
 function withRouteSuspense(Page: LazyExoticComponent<ComponentType>) {
   return function LazyRoutePage() {
@@ -38,6 +40,8 @@ const NetworkRoutePage = withRouteSuspense(LazyNetworkStatusPage)
 const ProfileRoutePage = withRouteSuspense(LazyIdentityDashboard)
 const DeveloperHomeRoutePage = withRouteSuspense(LazyDeveloperHomePage)
 const SecurityFoundationRoutePage = withRouteSuspense(LazySecurityFoundationPage)
+const DeliveryCoordinatorRoutePage = withRouteSuspense(LazyDeliveryCoordinatorPage)
+const OfflineWorkspaceRoutePage = withRouteSuspense(LazyOfflineWorkspacePage)
 
 const rootRoute = createRootRoute({ component: AppShell })
 
@@ -95,6 +99,18 @@ const developerSecurityRoute = createRoute({
   component: SecurityFoundationRoutePage,
 })
 
+const developerDeliveryRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/developer/delivery',
+  component: DeliveryCoordinatorRoutePage,
+})
+
+const developerWorkspaceRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/developer/workspace',
+  component: OfflineWorkspaceRoutePage,
+})
+
 // Compatibility aliases for bookmarks created before the product-shell split.
 const simulatorAliasRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -118,6 +134,8 @@ const routeTree = rootRoute.addChildren([
   developerMeshRoute,
   developerGatewayRoute,
   developerSecurityRoute,
+  developerDeliveryRoute,
+  developerWorkspaceRoute,
   simulatorAliasRoute,
   gatewayAliasRoute,
 ])

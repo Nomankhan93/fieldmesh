@@ -1,4 +1,4 @@
-# FieldMesh 0.7 — Groups, Permissions & Crypto Foundation
+# FieldMesh 0.8.1 — True Offline Conversation Workspace
 
 FieldMesh is a resilient messaging prototype designed around three eventual communication paths:
 
@@ -6,67 +6,64 @@ FieldMesh is a resilient messaging prototype designed around three eventual comm
 2. LoRa mesh → LoRa mesh
 3. LoRa → Gateway → Internet (and reverse)
 
-0.7 keeps the validated durable messaging, mesh simulator, hybrid gateway, Location/SOS and simplified user shell while adding private group conversations, role-based group management and a deliberately staged cryptographic foundation.
+0.8.0 introduced the canonical `FieldMeshMessage` and durable `DeliveryCoordinator`. 0.8.1 makes the **conversation workspace itself local-first** so a previously synchronized user can reopen Chats without Internet instead of depending on a fresh cloud conversation-list request.
 
-## Groups
-
-Users can create private groups from FieldMesh contact codes. Group roles are:
-
-- **Owner** — rename group, add/remove members, promote/demote admins, rotate crypto epoch metadata
-- **Admin** — rename group, add/remove ordinary members, rotate crypto epoch metadata
-- **Member** — read/send group messages and leave the group
-
-The owner is protected from removal and cannot leave until an ownership-transfer flow is implemented.
-
-## Permission boundary
-
-Group-management actions are enforced in Supabase security-definer RPCs rather than trusted only to the frontend. Unrelated users cannot enumerate group members or read/send group messages through RLS.
-
-## Crypto foundation
-
-0.7 adds:
-
-- versioned **AES-GCM-256** browser envelope helpers
-- conversation/message/sender/type binding through authenticated additional data (AAD)
-- replay-window hooks keyed by conversation + logical message ID
-- conversation crypto epoch metadata
-- conversation-scoped active device public-key discovery
-- **ECDH-P256 public-key registry** for owned active devices
-- group-admin permission for epoch rotation after membership changes
-
-Important boundary: **0.7 does not claim production end-to-end encryption.** Existing cloud chat bodies are still plaintext. Supabase stores public keys and key-epoch metadata only; conversation symmetric keys and device private keys are not stored by this foundation.
-
-## Developer security diagnostics
-
-Enable Developer Mode from **Profile → Advanced app settings**, then open:
+## Offline workspace pipeline
 
 ```text
-/developer/security
+App / Chats opens
+       ↓
+IndexedDB v6 workspace registry
+       ↓
+Cached conversations + participants + messages render immediately
+       ↓
+Internet available?
+       ├── no  → read cached history + queue new messages locally
+       └── yes → authoritative workspace sync + message sync + retry queue
 ```
 
-The page can run a local AES-GCM authenticated-encryption self-check and explains the current security boundary.
+## What changed in 0.8.1
+
+- IndexedDB schema version 6
+- durable `workspaceConversations`
+- durable `workspaceParticipants`
+- durable `workspaceSyncState`
+- per-conversation `workspaceSyncCursors`
+- Chats render from IndexedDB instead of remote React state
+- direct-chat labels and group member/role metadata survive offline reopen
+- existing cached messages remain readable while offline
+- outgoing text to an existing cached conversation still enters the 0.8.0 canonical delivery queue
+- remote workspace replacement is committed only after a complete successful metadata fetch
+- conversations removed by an authoritative successful sync are purged from the local workspace/queued data
+- remote-only creation and group-permission controls are disabled while offline
+- developer diagnostics at `/developer/workspace`
+
+See `docs/OFFLINE_CONVERSATION_WORKSPACE.md`.
+
+## Important boundaries
+
+0.8.1 does **not** create new conversations or mutate group membership offline. Those operations continue to require authoritative Supabase RPCs and 0.7.1 authorization rules.
+
+Normal Chats still register the Internet delivery adapter only. Radio/Gateway routing remains scheduled for the next software-alpha routing/integration stages.
+
+0.7 crypto remains a foundation, not production E2E encryption. Cloud chat bodies are still plaintext.
 
 ## Validation
 
 ```bash
 npm run check
+npm run test:workspace
+npm run test:delivery
+npm run test:architecture
 npm run test:crypto
+npm run test:authz
 npm run test:ui
 npm run test:sos
 npm run test:gateway
 npm run test:mesh
 npx supabase db reset
 npm run test:local
+npx supabase db lint
 ```
 
-0.7 adds this Supabase migration:
-
-```text
-20260924000200_groups_permissions_crypto_foundation.sql
-```
-
-After all local validation passes:
-
-```bash
-npx supabase db push
-```
+0.8.1 adds **no Supabase migration**. It adds IndexedDB schema version 6 locally.

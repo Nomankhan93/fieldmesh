@@ -33,7 +33,7 @@ export function HomePage() {
       ) : (
         <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_420px] lg:items-center">
           <section className="py-6 lg:py-12">
-            <p className="text-sm font-bold uppercase tracking-[0.18em] text-slate-500">FieldMesh 0.7.0</p>
+            <p className="text-sm font-bold uppercase tracking-[0.18em] text-slate-500">FieldMesh 0.8.0</p>
             <h1 className="mt-3 text-4xl font-bold tracking-tight sm:text-5xl">Messaging that can keep working when normal connectivity cannot.</h1>
             <p className="mt-5 max-w-2xl text-base leading-7 text-slate-600">Use Internet messaging today. FieldMesh is being built so compatible LoRa devices and gateways can later carry messages when cellular service or direct Internet is unavailable.</p>
           </section>

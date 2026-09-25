@@ -218,13 +218,13 @@ async function main() {
   assert.ok(memberRotate.error)
   console.log('PASS ordinary group member cannot rotate crypto epoch metadata')
 
-  const deviceA = await clients.a.from('devices').insert({ owner_id: users.a.id, label: 'Owner phone radio' }).select('id').single()
+  const deviceA = await clients.a.rpc('fieldmesh_create_device', { p_label: 'Owner phone radio' })
   if (deviceA.error) throw deviceA.error
-  const deviceB = await clients.b.from('devices').insert({ owner_id: users.b.id, label: 'Admin phone radio' }).select('id').single()
+  const deviceB = await clients.b.rpc('fieldmesh_create_device', { p_label: 'Admin phone radio' })
   if (deviceB.error) throw deviceB.error
 
   const keyA = await clients.a.rpc('fieldmesh_register_device_public_key', {
-    p_device_id: deviceA.data.id,
+    p_device_id: deviceA.data,
     p_algorithm: 'ECDH-P256',
     p_public_key: 'PUBLIC_KEY_A_'.padEnd(80, 'A'),
     p_fingerprint: 'fingerprint-owner-0001',
@@ -233,7 +233,7 @@ async function main() {
   assert.equal(keyA.data, 1)
 
   const keyA2 = await clients.a.rpc('fieldmesh_register_device_public_key', {
-    p_device_id: deviceA.data.id,
+    p_device_id: deviceA.data,
     p_algorithm: 'ECDH-P256',
     p_public_key: 'PUBLIC_KEY_A_ROTATED_'.padEnd(80, 'B'),
     p_fingerprint: 'fingerprint-owner-0002',
@@ -242,7 +242,7 @@ async function main() {
   assert.equal(keyA2.data, 2)
 
   const keyB = await clients.b.rpc('fieldmesh_register_device_public_key', {
-    p_device_id: deviceB.data.id,
+    p_device_id: deviceB.data,
     p_algorithm: 'ECDH-P256',
     p_public_key: 'PUBLIC_KEY_B_'.padEnd(80, 'C'),
     p_fingerprint: 'fingerprint-admin-0001',

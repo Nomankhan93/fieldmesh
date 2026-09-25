@@ -7,9 +7,11 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Dependencies / builds
 node_modules
 dist
 dist-ssr
+coverage
 *.local
 
 # Editor directories and files
@@ -22,33 +24,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
-
-# Local environment files
-.env
-.env.local
-.env.*.local
-
-# Local / secret environment files
-.env
-.env.local
-.env.*.local
-.env.remote.test
-
-# Local / secret environment files
-.env
-.env.local
-.env.*.local
-.env.remote.test
-
-# Environment / secrets
-.env
-.env.local
-.env.*.local
-.env.remote.test
-
-# Supabase local runtime state
-supabase/.temp/
-supabase/.branches/
 
 # Environment / secrets
 .env

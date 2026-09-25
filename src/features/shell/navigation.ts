@@ -1,8 +1,8 @@
-export type FieldMeshNavIcon = 'home' | 'chats' | 'sos' | 'network' | 'profile' | 'developer' | 'mesh' | 'gateway' | 'security'
+export type FieldMeshNavIcon = 'home' | 'chats' | 'sos' | 'network' | 'profile' | 'developer' | 'mesh' | 'gateway' | 'security' | 'delivery' | 'workspace'
 
 export type FieldMeshNavItem = {
   label: string
-  to: '/' | '/messages' | '/sos' | '/network' | '/profile' | '/developer' | '/developer/mesh' | '/developer/gateway' | '/developer/security'
+  to: '/' | '/messages' | '/sos' | '/network' | '/profile' | '/developer' | '/developer/mesh' | '/developer/gateway' | '/developer/security' | '/developer/delivery' | '/developer/workspace'
   description: string
   icon: FieldMeshNavIcon
 }
@@ -22,6 +22,8 @@ export const DEVELOPER_NAV_ITEMS: FieldMeshNavItem[] = [
   { label: 'Mesh lab', to: '/developer/mesh', description: 'Deterministic mesh simulator', icon: 'mesh' },
   { label: 'Gateway lab', to: '/developer/gateway', description: 'Hybrid gateway diagnostics', icon: 'gateway' },
   { label: 'Security', to: '/developer/security', description: 'Crypto foundation diagnostics', icon: 'security' },
+  { label: 'Delivery', to: '/developer/delivery', description: 'Canonical delivery diagnostics', icon: 'delivery' },
+  { label: 'Workspace', to: '/developer/workspace', description: 'Offline workspace diagnostics', icon: 'workspace' },
 ]
 
 export function isDeveloperPath(pathname: string): boolean {

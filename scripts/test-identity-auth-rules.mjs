@@ -10,11 +10,7 @@ function parseShellEnv(raw) {
     const [, key, rawValue] = match
     let value = rawValue.trim()
     if (value.startsWith('"') && value.endsWith('"')) {
-      try {
-        value = JSON.parse(value)
-      } catch {
-        value = value.slice(1, -1)
-      }
+      try { value = JSON.parse(value) } catch { value = value.slice(1, -1) }
     }
     env[key] = value
   }
@@ -38,11 +34,7 @@ function requireValue(value, label) {
 
 function makeClient(url, key) {
   return createClient(url, key, {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-      detectSessionInUrl: false,
-    },
+    auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
   })
 }
 
@@ -51,24 +43,15 @@ const statusOutput = execFileSync('npx', ['supabase', 'status', '-o', 'env'], {
   stdio: ['ignore', 'pipe', 'inherit'],
 })
 const env = parseShellEnv(statusOutput)
-
 const url = requireValue(env.API_URL ?? env.SUPABASE_URL, 'API URL')
 const publishableKey = requireValue(
-  env.PUBLISHABLE_KEY ??
-    env.SUPABASE_PUBLISHABLE_KEY ??
-    defaultDictionaryValue(env.PUBLISHABLE_KEYS) ??
-    defaultDictionaryValue(env.SUPABASE_PUBLISHABLE_KEYS) ??
-    env.ANON_KEY ??
-    env.SUPABASE_ANON_KEY,
+  env.PUBLISHABLE_KEY ?? env.SUPABASE_PUBLISHABLE_KEY ?? defaultDictionaryValue(env.PUBLISHABLE_KEYS) ??
+    defaultDictionaryValue(env.SUPABASE_PUBLISHABLE_KEYS) ?? env.ANON_KEY ?? env.SUPABASE_ANON_KEY,
   'publishable/anon key',
 )
 const secretKey = requireValue(
-  env.SECRET_KEY ??
-    env.SUPABASE_SECRET_KEY ??
-    defaultDictionaryValue(env.SECRET_KEYS) ??
-    defaultDictionaryValue(env.SUPABASE_SECRET_KEYS) ??
-    env.SERVICE_ROLE_KEY ??
-    env.SUPABASE_SERVICE_ROLE_KEY,
+  env.SECRET_KEY ?? env.SUPABASE_SECRET_KEY ?? defaultDictionaryValue(env.SECRET_KEYS) ??
+    defaultDictionaryValue(env.SUPABASE_SECRET_KEYS) ?? env.SERVICE_ROLE_KEY ?? env.SUPABASE_SERVICE_ROLE_KEY,
   'secret/service-role key',
 )
 
@@ -102,64 +85,66 @@ async function signIn(spec) {
   return client
 }
 
+async function ownProfile(client, userId) {
+  const result = await client.from('profiles').select('*').eq('id', userId).single()
+  if (result.error) throw result.error
+  return result.data
+}
+
 async function main() {
   const users = {}
   const clients = {}
-
   for (const spec of specs) {
     users[spec.key] = await createUser(spec)
     clients[spec.key] = await signIn(spec)
   }
 
-  const ownProfile = await clients.a.from('profiles').select('*').eq('id', users.a.id)
-  assert.equal(ownProfile.error, null)
-  assert.equal(ownProfile.data.length, 1, 'A should read own profile')
-  assert.ok(ownProfile.data[0].fieldmesh_user_id, 'stable FieldMesh user ID should exist')
-  console.log('PASS user can read own profile')
+  const profileA = await ownProfile(clients.a, users.a.id)
+  assert.ok(profileA.fieldmesh_user_id)
+  console.log('PASS user can read own profile with a stable FieldMesh user ID')
 
   const otherProfile = await clients.a.from('profiles').select('*').eq('id', users.b.id)
   assert.equal(otherProfile.error, null)
-  assert.equal(otherProfile.data.length, 0, 'A must not read B profile')
+  assert.equal(otherProfile.data.length, 0)
   console.log('PASS profile RLS hides other users')
 
-  const blockedProfileUpdate = await clients.a
-    .from('profiles')
-    .update({ display_name: 'Should not change' })
-    .eq('id', users.b.id)
-    .select('id')
-  assert.equal(blockedProfileUpdate.error, null)
-  assert.equal(blockedProfileUpdate.data.length, 0, 'A must not update B profile')
-  console.log('PASS profile RLS blocks cross-user updates')
+  const profileUpdate = await clients.a.rpc('fieldmesh_update_display_name', { p_display_name: 'FieldMesh A Updated' })
+  if (profileUpdate.error) throw profileUpdate.error
+  const updatedProfile = await ownProfile(clients.a, users.a.id)
+  assert.equal(updatedProfile.display_name, 'FieldMesh A Updated')
+  assert.equal(updatedProfile.fieldmesh_user_id, profileA.fieldmesh_user_id)
+  console.log('PASS display name updates through the narrow profile RPC without changing canonical identity')
 
-  const ownDevice = await clients.a
-    .from('devices')
-    .insert({ owner_id: users.a.id, label: 'A test radio' })
-    .select('*')
-    .single()
+  const rawOwnProfileUpdate = await clients.a.from('profiles').update({ display_name: 'Raw write forbidden' }).eq('id', users.a.id)
+  assert.ok(rawOwnProfileUpdate.error, 'authenticated raw profile updates must be denied')
+  console.log('PASS authenticated clients cannot update profile rows directly')
+
+  const createdDevice = await clients.a.rpc('fieldmesh_create_device', { p_label: 'A test radio' })
+  if (createdDevice.error) throw createdDevice.error
+  assert.equal(typeof createdDevice.data, 'string')
+  const ownDevice = await clients.a.from('devices').select('*').eq('id', createdDevice.data).single()
   if (ownDevice.error) throw ownDevice.error
   assert.equal(ownDevice.data.owner_id, users.a.id)
-  console.log('PASS user can create own device identity')
+  assert.ok(ownDevice.data.fieldmesh_device_id)
+  console.log('PASS device identity is created through the owned-device RPC')
 
-  const foreignDeviceInsert = await clients.a
-    .from('devices')
-    .insert({ owner_id: users.b.id, label: 'Forbidden device' })
-  assert.ok(foreignDeviceInsert.error, 'A inserting a B-owned device must be rejected')
-  console.log('PASS device RLS rejects foreign ownership')
+  const rawDeviceInsert = await clients.a.from('devices').insert({ owner_id: users.a.id, label: 'Forbidden raw device' })
+  assert.ok(rawDeviceInsert.error, 'authenticated raw device inserts must be denied')
+  console.log('PASS authenticated clients cannot create devices by raw table insert')
 
   const bReadsADevice = await clients.b.from('devices').select('*').eq('id', ownDevice.data.id)
   assert.equal(bReadsADevice.error, null)
-  assert.equal(bReadsADevice.data.length, 0, 'B must not read A device')
+  assert.equal(bReadsADevice.data.length, 0)
   console.log('PASS device RLS hides another user devices')
 
-  const conversationId = crypto.randomUUID()
-  const createdConversation = await clients.a
-    .from('conversations')
-    .insert({ id: conversationId, kind: 'direct', created_by: users.a.id })
-    .select('id, created_by')
-    .single()
-  if (createdConversation.error) throw createdConversation.error
-  assert.equal(createdConversation.data.created_by, users.a.id)
-  console.log('PASS creator can create and read own conversation')
+  const profileB = await ownProfile(clients.b, users.b.id)
+  const direct = await clients.a.rpc('fieldmesh_create_direct_conversation', {
+    p_recipient_fieldmesh_user_id: profileB.fieldmesh_user_id,
+  })
+  if (direct.error) throw direct.error
+  const conversationId = direct.data
+  assert.equal(typeof conversationId, 'string')
+  console.log('PASS direct conversation creation is RPC-only')
 
   const ownerMembership = await clients.a
     .from('conversation_members')
@@ -167,48 +152,40 @@ async function main() {
     .eq('conversation_id', conversationId)
     .eq('user_id', users.a.id)
     .single()
-
   if (ownerMembership.error) throw ownerMembership.error
   assert.equal(ownerMembership.data.role, 'owner')
-  console.log('PASS creator automatically becomes conversation owner/member')
 
-  const bBeforeMembership = await clients.b.from('conversations').select('id').eq('id', conversationId)
-  assert.equal(bBeforeMembership.error, null)
-  assert.equal(bBeforeMembership.data.length, 0)
-  console.log('PASS non-member cannot read conversation')
+  const bConversation = await clients.b.from('conversations').select('id').eq('id', conversationId)
+  assert.equal(bConversation.error, null)
+  assert.equal(bConversation.data.length, 1)
+  const cConversation = await clients.c.from('conversations').select('id').eq('id', conversationId)
+  assert.equal(cConversation.error, null)
+  assert.equal(cConversation.data.length, 0)
+  console.log('PASS direct conversation visibility remains membership-scoped')
 
-  const addB = await clients.a.from('conversation_members').insert({
-    conversation_id: conversationId,
-    user_id: users.b.id,
-    role: 'member',
+  const rawConversation = await clients.a.from('conversations').insert({
+    id: crypto.randomUUID(), kind: 'group', title: 'Forbidden raw group', created_by: users.a.id,
   })
-  if (addB.error) throw addB.error
+  assert.ok(rawConversation.error, 'raw conversation creation must be denied')
+  console.log('PASS authenticated clients cannot create conversations by raw table insert')
 
-  const bAfterMembership = await clients.b.from('conversations').select('id').eq('id', conversationId)
-  assert.equal(bAfterMembership.error, null)
-  assert.equal(bAfterMembership.data.length, 1)
-  console.log('PASS authorized member can read conversation')
-
-  const cStillBlocked = await clients.c.from('conversations').select('id').eq('id', conversationId)
-  assert.equal(cStillBlocked.error, null)
-  assert.equal(cStillBlocked.data.length, 0)
-  console.log('PASS unrelated user remains isolated')
-
-  const bConversationId = crypto.randomUUID()
-  const bConversation = await clients.b
-    .from('conversations')
-    .insert({ id: bConversationId, kind: 'group', title: 'B private group', created_by: users.b.id })
-  if (bConversation.error) throw bConversation.error
-
-  const unauthorizedMembership = await clients.a.from('conversation_members').insert({
-    conversation_id: bConversationId,
+  const rawMembership = await clients.a.from('conversation_members').insert({
+    conversation_id: conversationId,
     user_id: users.c.id,
     role: 'member',
   })
-  assert.ok(unauthorizedMembership.error, 'non-creator must not manage another conversation membership')
-  console.log('PASS only conversation creator can add members')
+  assert.ok(rawMembership.error, 'raw membership insertion must be denied')
+  console.log('PASS conversation membership cannot be mutated directly by the creator')
 
-  console.log('\nFieldMesh 0.2 local Auth/RLS scenarios passed.')
+  const rawDeleteRecipient = await clients.a
+    .from('conversation_members')
+    .delete()
+    .eq('conversation_id', conversationId)
+    .eq('user_id', users.b.id)
+  assert.ok(rawDeleteRecipient.error, 'direct recipient removal must be denied')
+  console.log('PASS direct-conversation membership cannot be reassigned through raw writes')
+
+  console.log('\nFieldMesh 0.7.1 identity/authorization scenarios passed.')
 }
 
 try {

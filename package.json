@@ -1,7 +1,7 @@
 {
   "name": "fieldmesh",
   "private": true,
-  "version": "0.7.0",
+  "version": "0.8.1",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -11,19 +11,22 @@
     "check": "tsc -b && vite build && vitest run",
     "test": "vitest run",
     "env:local": "node scripts/write-local-env.mjs",
-    "test:local": "node scripts/test-identity-auth-rules.mjs && node scripts/test-durable-messaging.mjs && node scripts/test-groups-permissions.mjs",
+    "test:local": "node scripts/test-identity-auth-rules.mjs && node scripts/test-authorization-integrity.mjs && node scripts/test-durable-messaging.mjs && node scripts/test-groups-permissions.mjs",
     "supabase:start": "supabase start",
     "supabase:stop": "supabase stop",
     "db:reset": "supabase db reset",
     "db:lint": "supabase db lint",
     "test:messaging": "node scripts/test-durable-messaging.mjs",
-    "test:architecture": "vitest run src/core/message/model.test.ts src/core/transport/frame.test.ts src/transports/router.test.ts src/core/message/codec.test.ts",
+    "test:architecture": "vitest run src/core/message/model.test.ts src/core/transport/frame.test.ts src/transports/router.test.ts src/core/message/codec.test.ts src/core/delivery/coordinator.test.ts src/core/delivery/internetAdapter.test.ts src/core/workspace/model.test.ts",
     "test:mesh": "vitest run src/core/mesh/simulator.test.ts src/features/simulator/simulatorView.test.ts",
     "test:gateway": "vitest run src/core/gateway/agent.test.ts",
     "test:sos": "vitest run src/core/location/location.test.ts src/core/sos/codec.test.ts src/core/sos/service.test.ts src/core/message/model.test.ts",
     "test:ui": "vitest run src/features/shell/navigation.test.ts src/features/contacts/contactCode.test.ts src/features/network/networkStatus.test.ts src/core/groups/permissions.test.ts",
     "test:groups": "node scripts/test-groups-permissions.mjs",
-    "test:crypto": "vitest run src/core/crypto/envelope.test.ts src/core/groups/permissions.test.ts"
+    "test:crypto": "vitest run src/core/crypto/envelope.test.ts src/core/groups/permissions.test.ts",
+    "test:authz": "node scripts/test-authorization-integrity.mjs",
+    "test:delivery": "vitest run src/core/delivery/coordinator.test.ts src/core/delivery/internetAdapter.test.ts",
+    "test:workspace": "vitest run src/core/workspace/model.test.ts src/features/shell/navigation.test.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.0",

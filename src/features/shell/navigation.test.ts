@@ -33,10 +33,14 @@ describe('FieldMesh product navigation', () => {
       '/developer/mesh',
       '/developer/gateway',
       '/developer/security',
+      '/developer/delivery',
+      '/developer/workspace',
     ])
     expect(isDeveloperPath('/developer/mesh')).toBe(true)
     expect(isDeveloperPath('/developer/gateway')).toBe(true)
     expect(isDeveloperPath('/developer/security')).toBe(true)
+    expect(isDeveloperPath('/developer/delivery')).toBe(true)
+    expect(isDeveloperPath('/developer/workspace')).toBe(true)
     expect(isDeveloperPath('/simulator')).toBe(true)
     expect(isDeveloperPath('/gateway')).toBe(true)
     expect(isDeveloperPath('/messages')).toBe(false)
